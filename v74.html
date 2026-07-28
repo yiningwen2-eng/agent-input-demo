@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WPS表格AI建表 - 交互Demo（v7.4.4 · 选区引用（修复框选卡死））</title>
+<title>WPS表格AI建表 - 交互Demo（v7.4.5 · 选区引用（修复框选卡死））</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #f0f0f0; overflow: hidden; height: 100vh; }
@@ -5980,7 +5980,9 @@ function injectSelectionChipToSbInput(payload) {
   syncSbInputPlaceholder();
   updateSbSendBtn();
   autoResizeSbInput();
-  input.focus();
+  setTimeout(function () {
+    try { input.focus({ preventScroll: true }); } catch (e) { try { input.focus(); } catch (e2) {} }
+  }, 30);
   return true;
 }
 
