@@ -2148,11 +2148,12 @@
         window.parent.postMessage({
           type: "agent-sidebar-badge-state",
           state: badgeState,
-          injectCurrent: !!(badgeRefOn && !prev && opts.injectCurrent !== false)
+          /* 开启写入只走 request-inject-current，避免与下方重复各写一次 */
+          injectCurrent: false
         }, "*");
       }
     } catch (e) {}
-    /* 表格始终有选区：开启自由选择时立即写入当前选区（可关 opts.injectCurrent） */
+    /* 表格始终有选区：开启自由选择时立即写入当前选区（仅一条路径） */
     if (badgeRefOn && !prev && opts.injectCurrent !== false) {
       injectCurrentSelectionNow();
     }
@@ -2474,6 +2475,12 @@
   document.addEventListener("mouseup", () => {
     if (!selecting) return;
     selecting = false;
+    /* 嵌入父页时选区写入由父表格负责，避免隐藏网格/冒泡误写入多条 */
+    if (/(?:\?|&)embed=1(?:&|$)/.test(location.search || "")) {
+      syncSelContextCard(selection);
+      hideFloat();
+      return;
+    }
     onSelectionCommitted(selection);
   });
 

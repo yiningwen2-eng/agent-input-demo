@@ -1753,7 +1753,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7413abmode"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7415onededup"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -6149,6 +6149,14 @@ function injectParentSelectionToSidebar() {
   /* 区选只写入已打开的侧栏；绝不因区选强制唤起未开侧栏，也不改动建表面板开合 */
   if (!isParentSidebarOpen()) return;
   const payload = parentSelectionPayload(parentSelection);
+  /* 防抖：开关开启瞬间多路径/ class 抖动时，同一选区只写入一次 */
+  var _sig = (payload.meta && payload.meta.sheet || '') + '!' + (payload.meta && payload.meta.range || payload.label || '');
+  var _now = Date.now();
+  if (_sig && _sig === window._lastSelInjectSig && (_now - (window._lastSelInjectAt || 0)) < 400) {
+    return;
+  }
+  window._lastSelInjectSig = _sig;
+  window._lastSelInjectAt = _now;
   // 建表生成后的对话层：写入可见的继续提问框，勿切回 iframe 空态（否则会丢生成结果且选区进隐藏页）
   if (isParentChatLayerActive()) {
     injectSelectionChipToSbInput(payload);
@@ -6377,6 +6385,7 @@ function bindAgentSidebarBridge() {
     if (d.type === 'agent-sidebar-badge-state') {
       parentBadgeState = d.state || 'off';
       ensureParentHasSelection();
+      /* 开启时的「写当前」仅由 request-inject-current 触发，此处不再重复写入 */
       if (d.injectCurrent && isParentBadgeOn()) {
         setTimeout(function () { injectParentSelectionToSidebar(); }, 0);
       }
@@ -6419,13 +6428,21 @@ function bindAgentSidebarBridge() {
   const sidebar = $('aiSidebar');
   if (sidebar && sidebar.dataset.openObs !== '1') {
     sidebar.dataset.openObs = '1';
+    var _sidebarOpenPrev = sidebar.classList.contains('show');
     const mo = new MutationObserver(() => {
       const open = sidebar.classList.contains('show');
+      /* 仅在开/关边沿处理；忽略 is-agent-empty 等其它 class 抖动，避免反复写入 */
+      if (open === _sidebarOpenPrev) {
+        syncParentFloatTipMode();
+        if (!open) hideParentFloat();
+        return;
+      }
+      _sidebarOpenPrev = open;
       postToAgentSidebar('agent-sidebar-set-sidebar-open', { open: open });
       syncParentFloatTipMode();
       if (!open) hideParentFloat();
       else if (parentSelection) {
-        /* legacy：开栏即写入；confirm：开栏不写入，等再选 */
+        /* legacy：开栏写当前；confirm：开栏不写入，等再选 */
         onParentSelectionCommitted(parentSelection, { fromSidebarOpen: true });
       }
     });
