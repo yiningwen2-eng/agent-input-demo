@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WPS表格AI建表 - 交互Demo（v7.4.1 · 选区引用 + 角标智能贴边）</title>
+<title>WPS表格AI建表 - 交互Demo（v7.4.2 · 选区引用工具态 · 框选即入）</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #f0f0f0; overflow: hidden; height: 100vh; }
@@ -167,11 +167,12 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
 .sp-grid-area::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
 .sp-grid-area::-webkit-scrollbar-corner { background: #f0f0f0; }
 .grid-table td.range-selected { background: rgba(31, 175, 104, 0.18) !important; }
-.selection-float {
+.selection-float { /* v742-no-badge */
+  display: none !important;
   position: absolute; z-index: 40; display: none;
   pointer-events: none; align-items: flex-start;
 }
-.selection-float.show { display: flex; }
+.selection-float.show { display: none !important; }
 .selection-float .float-add-wrap {
   pointer-events: auto; position: relative;
 }
@@ -1683,7 +1684,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=741smartedge"
+        src="agent-sidebar-embed-v74.html?embed=1&v=742toolmode"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -5815,10 +5816,8 @@ function isParentChatLayerActive() {
 }
 
 function shouldShowParentCanvasBadge(sel) {
-  const sidebar = $('aiSidebar');
-  if (!sel || !sidebar || !sidebar.classList.contains('show')) return false;
-  // v7.4：对话态 / 空态统一尊重「选区引用」开关
-  return isParentBadgeOn();
+  /* v7.4.2：无角标 */
+  return false;
 }
 
 function syncParentFloatTipMode() {
@@ -5928,11 +5927,11 @@ function notifyParentSelectionToSidebar(sel) {
 
 function onParentSelectionCommitted(sel) {
   notifyParentSelectionToSidebar(sel);
-  if (!sel || !isParentBadgeOn()) {
-    hideParentFloat();
-    return;
+  hideParentFloat();
+  /* 工具态：开关开则框选直接入对话（允许重复） */
+  if (sel && isParentBadgeOn()) {
+    injectParentSelectionToSidebar();
   }
-  placeParentFloat(sel);
 }
 
 function normalizeParentSel(a, b) {
@@ -5947,13 +5946,7 @@ function normalizeParentSel(a, b) {
 function injectSelectionChipToSbInput(payload) {
   const input = $('sbInput');
   if (!input || !payload || !payload.label) return false;
-  const existed = Array.from(input.querySelectorAll('.chip.selection')).some((c) => {
-    return (c.dataset.label || c.textContent || '').indexOf(payload.label) >= 0;
-  });
-  if (existed) {
-    updateGuide('该选区已添加');
-    return false;
-  }
+  /* v7.4.2：同选区允许反复添加 */
   const chip = document.createElement('span');
   chip.className = 'chip selection';
   chip.contentEditable = 'false';
@@ -5990,7 +5983,7 @@ function injectParentSelectionToSidebar() {
     if (shouldShowParentCanvasBadge(parentSelection)) {
       placeParentFloat(parentSelection, { immediate: true });
     }
-    updateGuide('已添加选区「' + payload.label + '」到继续提问（可继续框选多次挂载）');
+    updateGuide('已引用选区「' + payload.label + '」（可继续框选；同选区可重复添加）');
     return;
   }
   showSidebarAgentHome();
@@ -6000,7 +5993,7 @@ function injectParentSelectionToSidebar() {
   if (shouldShowParentCanvasBadge(parentSelection)) {
     placeParentFloat(parentSelection, { immediate: true });
   }
-  updateGuide('已添加选区「' + payload.label + '」到对话（可继续框选多次挂载）');
+  updateGuide('已引用选区「' + payload.label + '」（可继续框选；同选区可重复添加）');
 }
 
 function locateParentSelectionFromChip(meta) {
@@ -6147,7 +6140,7 @@ function bindParentSelectionFloat() {
       e.stopPropagation();
       postToAgentSidebar('agent-sidebar-disable-badge', { reason: 'tip-close' });
       hideParentFloat();
-      updateGuide('已关闭选区引用；可再点侧栏「选区引用」开启');
+      updateGuide('已关闭选区引用（已挂载芯片保留）');
     });
   }
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent 输入框升级 · Demo v7.4 选区引用开关</title>
+<title>Agent 输入框升级 · Demo v7.4.2 选区引用工具态</title>
 <style>
   :root {
     --bg-sidebar: #f7f7f7;
@@ -281,11 +281,12 @@
   .grid td.header-row { font-weight: 600; background: #fafafa; }
 
   .selection-float {
-    position: absolute; z-index: 20; display: none;
+    /* v7.4.2：工具态直接入芯片，不再使用角标 */
+    position: absolute; z-index: 20; display: none !important; /* v742-no-badge */
     pointer-events: none;
     align-items: flex-start;
   }
-  .selection-float.show { display: flex; }
+  .selection-float.show { display: none !important; }
   .selection-float .float-add-wrap {
     pointer-events: auto;
     position: relative;
@@ -1385,7 +1386,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4.1 · 选区引用 + 角标智能贴边</span>
+    <span class="demo-badge">v7.4.2 · 选区引用=工具态 · 框选即入 · 无角标</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -1502,7 +1503,7 @@
       <div class="grid-wrap" id="gridWrap">
         <table class="grid" id="grid"></table>
         <div class="selection-float" id="selectionFloat">
-          <!-- v7.4：仅「选区引用」开时出现；点气泡添加；hover「点此关闭」= 关常驻开关 -->
+          <!-- v7.4.2：角标已废弃；保留 DOM 兼容，CSS 永久隐藏 -->
           <div class="float-add-wrap" id="floatAddWrap">
             <button type="button" class="float-add" id="btnAddToChat" aria-label="添加到对话">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -1625,7 +1626,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
               </button>
               <button type="button" class="sel-ref-btn" id="btnSelRefToggle" aria-pressed="false" title="选区引用">
-                <span class="tip" id="selRefTip">选区引用 · 关（默认）</span>
+                <span class="tip" id="selRefTip">选区引用 · 关（开启后框选即进入）</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
                 <span>选区引用</span>
               </button>
@@ -1795,12 +1796,9 @@
     addSelectionFromParent: function (payload) {
       const label = (payload && payload.label) || "";
       if (!label) return;
-      if (chips.some((c) => c.type === "selection" && c.label === label)) {
-        showToast("该选区已添加");
-        return;
-      }
+      /* 允许同选区重复添加 */
       pushContextChip({
-        id: "sel-" + Date.now(),
+        id: "sel-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
         type: "selection",
         label: label,
         meta: (payload && payload.meta) || { sheet: getActiveSheetName(), range: label },
@@ -2094,8 +2092,7 @@
     syncBadgeSettingsUI();
     syncSelRefToggleUI();
     syncSelContextCard(selection);
-    if (badgeRefOn && selection && sidebarOpen) placeFloat(selection, { immediate: true });
-    else hideFloat();
+    hideFloat(); /* v7.4.2：无角标；开关只控制后续框选是否自动入芯片 */
     try {
       if (window.parent && window.parent !== window) {
         window.parent.postMessage({ type: "agent-sidebar-badge-state", state: badgeState }, "*");
@@ -2112,7 +2109,7 @@
       btn.classList.toggle("on", badgeRefOn);
       btn.setAttribute("aria-pressed", badgeRefOn ? "true" : "false");
     }
-    if (tip) tip.textContent = badgeRefOn ? "选区引用 · 开（框选处显示角标）" : "选区引用 · 关（默认）";
+    if (tip) tip.textContent = badgeRefOn ? "选区引用 · 开（框选即进入输入框）" : "选区引用 · 关（默认）";
   }
   function syncBadgeSettingsUI() {
     var sw = document.getElementById("switchBadgeEntry");
@@ -2195,15 +2192,17 @@
     card.classList.toggle("show", show);
   }
   function shouldShowCanvasBadge(sel) {
-    return !!sel && sidebarOpen && isBadgeOn();
+    /* v7.4.2：不再展示角标 */
+    return false;
   }
   function onSelectionCommitted(sel) {
     syncSelContextCard(sel);
-    if (!sel || !isBadgeOn()) {
-      hideFloat();
-      return;
+    hideFloat();
+    /* Select Element 式：开关开 + 侧栏开 + 完成框选 → 直接入芯片（允许重复） */
+    if (sel && sidebarOpen && isBadgeOn()) {
+      addSelectionChip(sel);
+      showToast("已引用选区：" + sheetRangeLabel(sel));
     }
-    placeFloat(sel);
   }
 
   function hideFloat() {
@@ -2890,10 +2889,7 @@
 
   function addSelectionChip(sel) {
     const label = sheetRangeLabel(sel);
-    if (chips.some((c) => c.type === "selection" && c.label === label)) {
-      showToast("该选区已在对话中");
-      return;
-    }
+    /* v7.4.2：同选区允许反复添加 */
     pushContextChip({
       id: "c" + chipIdSeq++,
       type: "selection",
@@ -2984,7 +2980,7 @@
     }
     function toggleSelRef() {
       setBadgeRefOn(!badgeRefOn);
-      showToast(badgeRefOn ? "已开启选区引用：框选处将显示角标" : "已关闭选区引用");
+      showToast(badgeRefOn ? "已开启选区引用：框选即进入输入框" : "已关闭选区引用（已挂载芯片保留）");
     }
 
     var btnSelRef = document.getElementById("btnSelRefToggle");
@@ -2995,7 +2991,7 @@
     if (btnTipClose) btnTipClose.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      disableBadge("已关闭选区引用；可再点侧栏「选区引用」开启");
+      disableBadge("已关闭选区引用（已挂载芯片保留）");
     });
     if (btnNewChat) btnNewChat.addEventListener("click", startNewConversation);
     function openSettings(e) {
@@ -3881,7 +3877,7 @@ html.agent-embed .sidebar.hidden {
 <div class="demo-settings-modal" id="demoSettingsModal">
   <div class="demo-settings-card">
     <h3>WPS AI 设置（Demo 模拟）</h3>
-    <p>v7.4：侧栏常驻「选区引用」开关，默认关。开启后，侧栏打开且有选区时才出角标。无询问条订阅。</p>
+    <p>v7.4.2：侧栏常驻「选区引用」= 工具态（类似 Cursor Select Element），默认关。开启后框选即进入输入框；关闭后已挂载芯片保留，之后框选不再自动进入。无角标。</p>
     <div class="row">
       <span>选区引用（常驻开关）</span>
       <div class="switch" id="switchBadgeEntry" role="switch" aria-checked="false"><i></i></div>
