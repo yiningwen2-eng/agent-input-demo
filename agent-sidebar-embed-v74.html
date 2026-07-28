@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent 输入框升级 · Demo v7.4.6 当前表+自由选择</title>
+<title>Agent 输入框升级 · Demo v7.4.7 修复选区菜单</title>
 <style>
   :root {
     --bg-sidebar: #f7f7f7;
@@ -424,6 +424,13 @@
   .sel-ref-menu {
     min-width: 220px;
   }
+
+  #selRefMenu {
+    min-width: 220px;
+    max-width: min(280px, 92%);
+    z-index: 60;
+  }
+
 
   .sel-ref-menu .menu-item {
     align-items: flex-start;
@@ -1441,7 +1448,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4.6 · 当前表+自由选择</span>
+    <span class="demo-badge">v7.4.7 · 修复选区菜单</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -2252,12 +2259,12 @@
     }
   }
   function injectCurrentSelectionNow() {
-    if (!(sidebarOpen && isBadgeOn())) return;
-    var sel = selection;
-    if (!sel && window.parent && window.parent !== window) {
+    if (!isBadgeOn()) return;
+    /* 嵌入父页时选区在父文档：优先让父页注入 */
+    if (window.parent && window.parent !== window) {
       try { window.parent.postMessage({ type: "agent-sidebar-request-inject-current" }, "*"); } catch (e) {}
-      return;
     }
+    var sel = selection;
     if (!sel) return;
     var snap = { r1: sel.r1, c1: sel.c1, r2: sel.r2, c2: sel.c2 };
     setTimeout(function () {
@@ -3223,13 +3230,22 @@
       if (freeChk) freeChk.textContent = badgeRefOn ? "✓" : "";
       var freeBtn = document.getElementById("btnSelRefFreeSelect");
       if (freeBtn) freeBtn.classList.toggle("selected", badgeRefOn);
-      var rect = anchor.getBoundingClientRect();
-      var host = anchor.closest(".composer") || anchor.closest(".input-shell") || document.body;
-      var hostRect = host.getBoundingClientRect();
-      selRefMenu.style.left = Math.max(8, rect.left - hostRect.left) + "px";
-      selRefMenu.style.bottom = (hostRect.bottom - rect.top + 6) + "px";
-      selRefMenu.style.top = "auto";
+      /* 相对 input-card 定位（与 #uploadMenu 同构），禁止用 body 算坐标 */
+      var card = document.getElementById("inputCard") || anchor.closest(".input-card");
+      if (card) {
+        var a = anchor.getBoundingClientRect();
+        var c = card.getBoundingClientRect();
+        selRefMenu.style.left = Math.max(8, a.left - c.left) + "px";
+        selRefMenu.style.right = "auto";
+        selRefMenu.style.bottom = Math.max(8, c.bottom - a.top + 6) + "px";
+        selRefMenu.style.top = "auto";
+      } else {
+        selRefMenu.style.left = "36px";
+        selRefMenu.style.bottom = "calc(100% - 4px)";
+        selRefMenu.style.top = "auto";
+      }
       selRefMenu.classList.add("show");
+      if (typeof syncSbBodyMenuOpen === "function") syncSbBodyMenuOpen();
     }
 
     var btnSelRef = document.getElementById("btnSelRefToggle");
@@ -3867,6 +3883,8 @@
       e.target.closest("#skillPanel") ||
       e.target.closest("#uploadMenu") ||
       e.target.closest("#voiceMenu") ||
+      e.target.closest("#selRefMenu") ||
+      e.target.closest("#selRefGroup") ||
       e.target.closest("#inputCard")
     ) {
       // keep menus open
