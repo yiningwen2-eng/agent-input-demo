@@ -1842,7 +1842,11 @@
     },
     setSidebarOpenFromParent: function (open) {
       sidebarOpen = !!open;
-      if (!sidebarOpen) hideFloat();
+      if (!sidebarOpen) {
+        hideFloat();
+        /* 关侧栏 → 自动关闭选区引用（会话工具态）；已添加内容保留 */
+        if (badgeRefOn) setBadgeRefOn(false, { injectCurrent: false });
+      }
       syncSelContextCard(selection);
     },
     getBadgeState: function () { return badgeState; },
@@ -2113,11 +2117,11 @@
    * 无询问条 / 订阅制主路径；芯片回选与多选区保留
    */
   var BADGE_KEY = "da_input_v74_sel_ref_on";
-  var badgeRefOn = (function () {
-    try { return localStorage.getItem(BADGE_KEY) === "1"; } catch (e) { return false; }
-  })();
+  /* 选区引用为侧栏会话工具态：不跨关栏/刷新记住为开；出厂与每次进栏默认关 */
+  var badgeRefOn = false;
+  try { localStorage.setItem(BADGE_KEY, "0"); } catch (e) {}
   /** 对外状态：on | off（供设置面板与父页桥接） */
-  var badgeState = badgeRefOn ? "on" : "off";
+  var badgeState = "off";
   var floatTipHideTimer = null;
   /** home = 侧栏首页；chat = 对话流（输入框能力不变；询问条已废弃） */
   var convMode = "home";
