@@ -1753,7 +1753,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7413abmode2"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7413abmode"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -6037,8 +6037,8 @@ function setSelRefOpenMode(mode) {
   try { localStorage.setItem(SEL_REF_OPEN_MODE_KEY, selRefOpenMode); } catch (e) {}
   syncSelRefModePanel();
   updateGuide(selRefOpenMode === 'confirm'
-    ? '已切到【再选才写入】：开栏不自动填入当前选区，需再框一次'
-    : '已切到【开栏即写入】：开栏且开关已开 → 立刻写入当前选区');
+    ? '已切到【再选才写入】：开栏不自动填入；需再框一次才写入（仅写该次选区）'
+    : '已切到【开栏写当前】：开栏且开关已开 → 只写入此刻当前选区（非历史全部）');
 }
 
 function syncSelRefModePanel() {
@@ -6050,8 +6050,8 @@ function syncSelRefModePanel() {
   if (confirmBtn) confirmBtn.classList.toggle('on', mode === 'confirm');
   if (hint) {
     hint.textContent = mode === 'confirm'
-      ? '当前：开栏且开关已开 → 不自动填入；用户再框选一次才写入'
-      : '当前：开栏且开关已开 → 立刻写入当前选区';
+      ? '当前：开栏且开关已开 → 不自动填入；再框选一次才写入该次选区'
+      : '当前：开栏且开关已开 → 只写入此刻当前选区（不是历史全部）';
   }
 }
 
