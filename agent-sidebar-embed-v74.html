@@ -4004,6 +4004,14 @@ html.agent-embed .sidebar.hidden {
         window.AgentSidebarDemo.clearParentSelection();
       }
     }
+    if (d.type === "agent-sidebar-clear-chip-active") {
+      var uiClr = document.getElementById("userInput");
+      if (uiClr) {
+        uiClr.querySelectorAll(".chip.selection.is-active").forEach(function (n) {
+          n.classList.remove("is-active");
+        });
+      }
+    }
     if (d.type === "agent-sidebar-set-sidebar-open") {
       if (window.AgentSidebarDemo && typeof window.AgentSidebarDemo.setSidebarOpenFromParent === "function") {
         window.AgentSidebarDemo.setSidebarOpenFromParent(!!d.open);

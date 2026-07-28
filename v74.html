@@ -1684,7 +1684,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7418keepinput"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7419chipactive"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -6047,6 +6047,14 @@ function injectParentSelectionToSidebar() {
   updateGuide('已引用选区「' + payload.label + '」（可继续框选；同选区可重复添加）');
 }
 
+function clearSelectionChipActiveState() {
+  const sb = $('sbInput');
+  if (sb) sb.querySelectorAll('.chip.selection.is-active').forEach(function (n) {
+    n.classList.remove('is-active');
+  });
+  postToAgentSidebar('agent-sidebar-clear-chip-active');
+}
+
 function locateParentSelectionFromChip(meta) {
   if (!meta) return;
   let sheetName = meta.sheet || '';
@@ -6150,6 +6158,8 @@ function bindParentSelectionFloat() {
     if (e.button === 2) return;
     const td = e.target.closest('td[data-r][data-c]');
     if (!td || !td.closest('#gridTable')) return;
+    /* 表格出现新选区意图：清除输入框里选区芯片的回选选中态 */
+    clearSelectionChipActiveState();
     // 阻止浏览器原生拖选，否则同行「行号」会被一起刷蓝
     e.preventDefault();
     try { const s = window.getSelection && window.getSelection(); if (s) s.removeAllRanges(); } catch (err) {}
