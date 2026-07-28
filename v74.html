@@ -1160,6 +1160,64 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
 .sp-titlebar .guide-bar .guide-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 .sp-titlebar .guide-bar .guide-btn.primary { background: #4d8cf5; border-color: #4d8cf5; }
 
+/* Demo：选区开栏策略 A/B 对比（并存，不替换） */
+.sel-ref-mode-panel {
+  position: fixed;
+  left: 12px;
+  top: 96px;
+  z-index: 9200;
+  width: 280px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(24, 28, 40, 0.92);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+.sel-ref-mode-panel .sel-ref-mode-title {
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.sel-ref-mode-panel .sel-ref-mode-btns {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.sel-ref-mode-panel .sel-ref-mode-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: transparent;
+  color: rgba(255,255,255,0.82);
+  font-size: 11px;
+  cursor: pointer;
+}
+.sel-ref-mode-panel .sel-ref-mode-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+.sel-ref-mode-panel .sel-ref-mode-btn.on {
+  background: #4d8cf5;
+  border-color: #4d8cf5;
+  color: #fff;
+  font-weight: 600;
+}
+.sel-ref-mode-panel .sel-ref-mode-hint {
+  opacity: 0.88;
+  font-size: 11px;
+  color: rgba(255,255,255,0.88);
+}
+.sel-ref-mode-panel .sel-ref-mode-steps {
+  margin-top: 6px;
+  opacity: 0.72;
+  font-size: 10px;
+  color: rgba(255,255,255,0.78);
+}
+
 /* ============ 稻壳风格首页 ============ */
 .np-main.np-main-docer {
   flex: 1; padding: 0; overflow-y: auto; background: #f5f6f8;
@@ -1466,6 +1524,17 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
     </div>
   </div>
 
+  <!-- Demo 对比：开栏即写入（现有） vs 再选才写入（新） -->
+  <div class="sel-ref-mode-panel" id="selRefModePanel" aria-label="选区开栏策略对比">
+    <div class="sel-ref-mode-title">选区 · 开栏策略对比（并存）</div>
+    <div class="sel-ref-mode-btns">
+      <button type="button" class="sel-ref-mode-btn on" id="selRefModeLegacy" data-mode="legacy">开栏即写入<br><span style="font-weight:400;opacity:.85">现有</span></button>
+      <button type="button" class="sel-ref-mode-btn" id="selRefModeConfirm" data-mode="confirm">再选才写入<br><span style="font-weight:400;opacity:.85">新设计</span></button>
+    </div>
+    <div class="sel-ref-mode-hint" id="selRefModeHint">当前：开栏且开关已开 → 立刻写入当前选区</div>
+    <div class="sel-ref-mode-steps">对比：开侧栏→开选区引用→关侧栏→点单元格→再开侧栏</div>
+  </div>
+
   <!-- Ribbon -->
   <div class="sp-ribbon">
     <div class="ribbon-tabs">
@@ -1684,7 +1753,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7412selnoforce"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7413abmode"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -5950,15 +6019,78 @@ function notifyParentSelectionToSidebar(sel) {
 
 var _parentSelRefInjectTimer = null;
 var _parentSelRefInjectLock = false;
+/** Demo A/B：legacy=开栏即写入（现有）；confirm=再选才写入（新设计） */
+var SEL_REF_OPEN_MODE_KEY = 'da_input_v74_sel_open_mode';
+var selRefOpenMode = (function () {
+  try {
+    var v = localStorage.getItem(SEL_REF_OPEN_MODE_KEY);
+    return v === 'confirm' ? 'confirm' : 'legacy';
+  } catch (e) { return 'legacy'; }
+})();
+
+function getSelRefOpenMode() {
+  return selRefOpenMode === 'confirm' ? 'confirm' : 'legacy';
+}
+
+function setSelRefOpenMode(mode) {
+  selRefOpenMode = mode === 'confirm' ? 'confirm' : 'legacy';
+  try { localStorage.setItem(SEL_REF_OPEN_MODE_KEY, selRefOpenMode); } catch (e) {}
+  syncSelRefModePanel();
+  updateGuide(selRefOpenMode === 'confirm'
+    ? '已切到【再选才写入】：开栏不自动填入当前选区，需再框一次'
+    : '已切到【开栏即写入】：开栏且开关已开 → 立刻写入当前选区');
+}
+
+function syncSelRefModePanel() {
+  var legacyBtn = $('selRefModeLegacy');
+  var confirmBtn = $('selRefModeConfirm');
+  var hint = $('selRefModeHint');
+  var mode = getSelRefOpenMode();
+  if (legacyBtn) legacyBtn.classList.toggle('on', mode === 'legacy');
+  if (confirmBtn) confirmBtn.classList.toggle('on', mode === 'confirm');
+  if (hint) {
+    hint.textContent = mode === 'confirm'
+      ? '当前：开栏且开关已开 → 不自动填入；用户再框选一次才写入'
+      : '当前：开栏且开关已开 → 立刻写入当前选区';
+  }
+}
+
+function bindSelRefModePanel() {
+  var panel = $('selRefModePanel');
+  if (!panel || panel.dataset.bound === '1') return;
+  panel.dataset.bound = '1';
+  var legacyBtn = $('selRefModeLegacy');
+  var confirmBtn = $('selRefModeConfirm');
+  if (legacyBtn) {
+    legacyBtn.addEventListener('click', function () { setSelRefOpenMode('legacy'); });
+  }
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', function () { setSelRefOpenMode('confirm'); });
+  }
+  syncSelRefModePanel();
+}
 
 function isParentSidebarOpen() {
   const sidebar = $('aiSidebar');
   return !!(sidebar && sidebar.classList.contains('show'));
 }
 
-function onParentSelectionCommitted(sel) {
+/**
+ * @param {object} sel
+ * @param {{ fromSidebarOpen?: boolean }} [opts]
+ * fromSidebarOpen：侧栏刚打开时的同步，不是用户新的区选动作
+ */
+function onParentSelectionCommitted(sel, opts) {
+  opts = opts || {};
   notifyParentSelectionToSidebar(sel);
   hideParentFloat();
+  /* 新设计：开栏本身不构成写入意图，等用户再选一次 */
+  if (opts.fromSidebarOpen && getSelRefOpenMode() === 'confirm') {
+    if (isParentBadgeOn()) {
+      updateGuide('【再选才写入】侧栏已恢复；当前选区未自动填入，请再框选一次');
+    }
+    return;
+  }
   /* 工具态：开关开则框选直接入对话（允许重复）
      延后到 mouseup 之后，避免同步 postMessage/focus 卡死
      侧栏未开时不写入、也不强制唤起（遵循侧栏既有开合） */
@@ -6292,10 +6424,14 @@ function bindAgentSidebarBridge() {
       postToAgentSidebar('agent-sidebar-set-sidebar-open', { open: open });
       syncParentFloatTipMode();
       if (!open) hideParentFloat();
-      else if (parentSelection) onParentSelectionCommitted(parentSelection);
+      else if (parentSelection) {
+        /* legacy：开栏即写入；confirm：开栏不写入，等再选 */
+        onParentSelectionCommitted(parentSelection, { fromSidebarOpen: true });
+      }
     });
     mo.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
   }
+  bindSelRefModePanel();
 }
 
 function clearSidebarBody() {
