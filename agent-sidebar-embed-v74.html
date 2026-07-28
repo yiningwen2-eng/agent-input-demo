@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent 输入框升级 · Demo v7.4.2 选区引用工具态</title>
+<title>Agent 输入框升级 · Demo v7.4.3 选区引用工具态</title>
 <style>
   :root {
     --bg-sidebar: #f7f7f7;
@@ -1386,7 +1386,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4.2 · 选区引用=工具态 · 框选即入 · 无角标</span>
+    <span class="demo-badge">v7.4.3 · 选区引用工具态（修复侧栏开关）</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -2003,6 +2003,7 @@
   }
 
   function showToast(msg) {
+    if (!toast) return;
     toast.textContent = msg;
     toast.classList.add("show");
     clearTimeout(showToast._t);
@@ -3108,7 +3109,8 @@
   function openSidebar() {
     sidebarOpen = true;
     sidebar.classList.remove("hidden");
-    onSelectionCommitted(selection);
+    hideFloat();
+    /* v7.4.3：打开侧栏本身不写入选区；仅用户框选且开关开时才入芯片 */
   }
   function closeSidebar() {
     sidebarOpen = false;
@@ -3252,7 +3254,7 @@
       workbookSheetNames = Array.from(document.querySelectorAll(".sheet-tab[data-sheet]")).map((t) => t.dataset.sheet);
       if (selection) {
         paintSelection(selection);
-        onSelectionCommitted(selection);
+        /* 切表只回显选区，不重复自动入芯片 */
       }
       if (atPanel.classList.contains("show") && (atView === "root" || atView === "sheets")) {
         renderAtPanel();

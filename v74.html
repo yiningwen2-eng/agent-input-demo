@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WPS表格AI建表 - 交互Demo（v7.4.2 · 选区引用工具态 · 框选即入）</title>
+<title>WPS表格AI建表 - 交互Demo（v7.4.3 · 选区引用工具态（修复侧栏））</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #f0f0f0; overflow: hidden; height: 100vh; }
@@ -1684,7 +1684,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=742toolmode"
+        src="agent-sidebar-embed-v74.html?embed=1&v=743fixsidebar"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -3746,6 +3746,7 @@ function openEastChinaOpsWorkbook() {
   currentState = State.DISMISSED;
   passiveClosePanel();
   $('aiSidebar').classList.add('show');
+  postToAgentSidebar('agent-sidebar-set-sidebar-open', { open: true });
   syncAgentSidebarSheets();
   updateGuide('已打开「' + OPS_WORKBOOK_META.title + '」→ 侧栏输入 @ → 当前工作表，可见多账期/汇总/说明表；激活表为「2月门店日销」');
 }
@@ -5185,22 +5186,25 @@ function bindEvents() {
   // PRD §6.8: 打开侧边栏时面板立即关闭（互斥）；关闭侧边栏不恢复面板
   $('toggleSidebarBtn').addEventListener('click', () => {
     const sidebar = $('aiSidebar');
+    if (!sidebar) return;
     sidebar.classList.toggle('show');
-    if (sidebar.classList.contains('show')) {
+    const opened = sidebar.classList.contains('show');
+    postToAgentSidebar('agent-sidebar-set-sidebar-open', { open: opened });
+    if (opened) {
       if (currentState === State.SHOW) {
         closeAiPanelFully();
         updateGuide('打开灵犀侧边栏 → 面板已关闭（互斥规则）');
       } else {
         updateGuide('已打开 WPS 灵犀侧边栏');
       }
-      if (!$('sidebarBody').querySelector('.chat-msg')) {
+      const body = $('sidebarBody');
+      if (body && !body.querySelector('.chat-msg')) {
         restoreSidebarHome();
       }
       syncAgentSidebarSheets();
-      if (parentSelection) placeParentFloat(parentSelection);
+      hideParentFloat();
     } else {
-      const floatEl = $('selectionFloat');
-      if (floatEl) floatEl.classList.remove('show');
+      hideParentFloat();
       updateGuide('已关闭侧边栏（面板不恢复）');
     }
   });
