@@ -346,6 +346,16 @@
   }
   .selection-float .tip-close:hover { color: #bfdbfe; }
 
+  /* 角标靠近右缘时 tip 改向左展开，避免进侧栏 */
+  .selection-float .float-add-wrap.tip-left .float-tip {
+    left: auto;
+    right: calc(100% + 4px);
+  }
+  .selection-float .float-add-wrap.tip-left .float-tip::before {
+    left: auto;
+    right: -10px;
+  }
+
   /* v7.4 选区引用常驻开关 */
   .sel-ref-btn {
     height: 28px;
@@ -1375,7 +1385,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4 · 侧栏常驻「选区引用」默认关 · 无询问条</span>
+    <span class="demo-badge">v7.4.1 · 选区引用 + 角标智能贴边</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -2264,12 +2274,72 @@
         floatEl.classList.remove("show");
         return;
       }
-      const td = grid.querySelector('td[data-r="' + selection.r2 + '"][data-c="' + selection.c2 + '"]');
-      if (!td) return;
+      const BADGE = 26;
+      const MARGIN = 6;
       const wrapRect = gridWrap.getBoundingClientRect();
-      const tdRect = td.getBoundingClientRect();
-      floatEl.style.left = (tdRect.right - wrapRect.left + gridWrap.scrollLeft - 10) + "px";
-      floatEl.style.top = (tdRect.bottom - wrapRect.top + gridWrap.scrollTop - 10) + "px";
+      const viewL = gridWrap.scrollLeft;
+      const viewT = gridWrap.scrollTop;
+      const viewR = viewL + wrapRect.width;
+      const viewB = viewT + wrapRect.height;
+
+      function cellRect(r, c) {
+        const td = grid.querySelector('td[data-r="' + r + '"][data-c="' + c + '"]');
+        if (!td) return null;
+        const rr = td.getBoundingClientRect();
+        return {
+          left: rr.left - wrapRect.left + gridWrap.scrollLeft,
+          top: rr.top - wrapRect.top + gridWrap.scrollTop,
+          right: rr.right - wrapRect.left + gridWrap.scrollLeft,
+          bottom: rr.bottom - wrapRect.top + gridWrap.scrollTop,
+        };
+      }
+      const a = cellRect(selection.r1, selection.c1);
+      const b = cellRect(selection.r2, selection.c2);
+      if (!a || !b) return;
+      const selL = Math.min(a.left, b.left);
+      const selT = Math.min(a.top, b.top);
+      const selR = Math.max(a.right, b.right);
+      const selB = Math.max(a.bottom, b.bottom);
+
+      /* 选区与可视区交集；无交集则把盒子夹到视口内靠选区一侧 */
+      let visL = Math.max(selL, viewL);
+      let visT = Math.max(selT, viewT);
+      let visR = Math.min(selR, viewR);
+      let visB = Math.min(selB, viewB);
+      if (visR - visL < 4 || visB - visT < 4) {
+        visL = Math.min(Math.max(selL, viewL), viewR - 4);
+        visR = Math.max(visL + 4, Math.min(selR, viewR));
+        visT = Math.min(Math.max(selT, viewT), viewB - 4);
+        visB = Math.max(visT + 4, Math.min(selB, viewB));
+      }
+
+      const candidates = [
+        { x: visR - 10, y: visB - 10, tipLeft: false }, /* 右下（默认） */
+        { x: visL - 16, y: visB - 10, tipLeft: true },  /* 左下 */
+        { x: visR - 10, y: visT - 16, tipLeft: false }, /* 右上 */
+        { x: visL - 16, y: visT - 16, tipLeft: true },  /* 左上 */
+      ];
+      function score(p) {
+        const x2 = p.x + BADGE;
+        const y2 = p.y + BADGE;
+        const inX = Math.max(0, Math.min(x2, viewR - MARGIN) - Math.max(p.x, viewL + MARGIN));
+        const inY = Math.max(0, Math.min(y2, viewB - MARGIN) - Math.max(p.y, viewT + MARGIN));
+        return inX * inY;
+      }
+      let best = candidates[0];
+      let bestScore = -1;
+      for (let i = 0; i < candidates.length; i++) {
+        const s = score(candidates[i]);
+        if (s > bestScore) { bestScore = s; best = candidates[i]; }
+      }
+      let x = Math.min(Math.max(best.x, viewL + MARGIN), viewR - BADGE - MARGIN);
+      let y = Math.min(Math.max(best.y, viewT + MARGIN), viewB - BADGE - MARGIN);
+      /* 贴右缘时 tip 向左，避免进侧栏 */
+      const tipLeft = best.tipLeft || (x + BADGE + 120 > viewR);
+      const wrap = document.getElementById("floatAddWrap");
+      if (wrap) wrap.classList.toggle("tip-left", !!tipLeft);
+      floatEl.style.left = x + "px";
+      floatEl.style.top = y + "px";
       floatEl.classList.add("show");
     }, delay);
   }
@@ -2292,6 +2362,17 @@
     wrap.addEventListener("mouseleave", scheduleCloseTip);
   }
   wireFloatTipHover();
+
+  if (gridWrap && !gridWrap._selFloatScrollBound) {
+    gridWrap._selFloatScrollBound = true;
+    gridWrap.addEventListener("scroll", function () {
+      if (selection && shouldShowCanvasBadge(selection)) placeFloat(selection, { immediate: true });
+    }, { passive: true });
+    window.addEventListener("resize", function () {
+      if (selection && shouldShowCanvasBadge(selection)) placeFloat(selection, { immediate: true });
+    });
+  }
+
 
   function normalizeSel(a, b) {
     return {

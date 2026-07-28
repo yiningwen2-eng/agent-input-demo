@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WPS表格AI建表 - 交互Demo（v7.4 · 选区引用常驻开关）</title>
+<title>WPS表格AI建表 - 交互Demo（v7.4.1 · 选区引用 + 角标智能贴边）</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #f0f0f0; overflow: hidden; height: 100vh; }
@@ -214,6 +214,17 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
   font-family: inherit;
 }
 .selection-float .tip-close:hover { color: #bfdbfe; }
+
+  /* 角标靠近右缘时 tip 改向左展开，避免进侧栏 */
+  .selection-float .float-add-wrap.tip-left .float-tip {
+    left: auto;
+    right: calc(100% + 4px);
+  }
+  .selection-float .float-add-wrap.tip-left .float-tip::before {
+    left: auto;
+    right: -10px;
+  }
+
 .grid-table td.locate-flash {
   outline: 2px solid #1FAF68 !important;
   outline-offset: -2px;
@@ -1672,7 +1683,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=74selref"
+        src="agent-sidebar-embed-v74.html?embed=1&v=741smartedge"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -5838,14 +5849,70 @@ function placeParentFloat(sel, opts) {
       hideParentFloat();
       return;
     }
-    const td = table.querySelector(
-      'td[data-r="' + parentSelection.r2 + '"][data-c="' + COLS[parentSelection.c2] + '"]'
-    );
-    if (!td) return;
+    const BADGE = 26;
+    const MARGIN = 6;
     const wrapRect = gridArea.getBoundingClientRect();
-    const tdRect = td.getBoundingClientRect();
-    floatEl.style.left = (tdRect.right - wrapRect.left + gridArea.scrollLeft - 10) + 'px';
-    floatEl.style.top = (tdRect.bottom - wrapRect.top + gridArea.scrollTop - 10) + 'px';
+    const viewL = gridArea.scrollLeft;
+    const viewT = gridArea.scrollTop;
+    const viewR = viewL + wrapRect.width;
+    const viewB = viewT + wrapRect.height;
+
+    function cellRect(r, c) {
+      const td = table.querySelector('td[data-r="' + r + '"][data-c="' + COLS[c] + '"]');
+      if (!td) return null;
+      const rr = td.getBoundingClientRect();
+      return {
+        left: rr.left - wrapRect.left + gridArea.scrollLeft,
+        top: rr.top - wrapRect.top + gridArea.scrollTop,
+        right: rr.right - wrapRect.left + gridArea.scrollLeft,
+        bottom: rr.bottom - wrapRect.top + gridArea.scrollTop,
+      };
+    }
+    const a = cellRect(parentSelection.r1, parentSelection.c1);
+    const b = cellRect(parentSelection.r2, parentSelection.c2);
+    if (!a || !b) return;
+    const selL = Math.min(a.left, b.left);
+    const selT = Math.min(a.top, b.top);
+    const selR = Math.max(a.right, b.right);
+    const selB = Math.max(a.bottom, b.bottom);
+
+    let visL = Math.max(selL, viewL);
+    let visT = Math.max(selT, viewT);
+    let visR = Math.min(selR, viewR);
+    let visB = Math.min(selB, viewB);
+    if (visR - visL < 4 || visB - visT < 4) {
+      visL = Math.min(Math.max(selL, viewL), viewR - 4);
+      visR = Math.max(visL + 4, Math.min(selR, viewR));
+      visT = Math.min(Math.max(selT, viewT), viewB - 4);
+      visB = Math.max(visT + 4, Math.min(selB, viewB));
+    }
+
+    const candidates = [
+      { x: visR - 10, y: visB - 10, tipLeft: false },
+      { x: visL - 16, y: visB - 10, tipLeft: true },
+      { x: visR - 10, y: visT - 16, tipLeft: false },
+      { x: visL - 16, y: visT - 16, tipLeft: true },
+    ];
+    function score(p) {
+      const x2 = p.x + BADGE;
+      const y2 = p.y + BADGE;
+      const inX = Math.max(0, Math.min(x2, viewR - MARGIN) - Math.max(p.x, viewL + MARGIN));
+      const inY = Math.max(0, Math.min(y2, viewB - MARGIN) - Math.max(p.y, viewT + MARGIN));
+      return inX * inY;
+    }
+    let best = candidates[0];
+    let bestScore = -1;
+    for (let i = 0; i < candidates.length; i++) {
+      const s = score(candidates[i]);
+      if (s > bestScore) { bestScore = s; best = candidates[i]; }
+    }
+    let x = Math.min(Math.max(best.x, viewL + MARGIN), viewR - BADGE - MARGIN);
+    let y = Math.min(Math.max(best.y, viewT + MARGIN), viewB - BADGE - MARGIN);
+    const tipLeft = best.tipLeft || (x + BADGE + 120 > viewR);
+    const wrap = $('floatAddWrap');
+    if (wrap) wrap.classList.toggle('tip-left', !!tipLeft);
+    floatEl.style.left = x + 'px';
+    floatEl.style.top = y + 'px';
     floatEl.classList.add('show');
   }, delay);
 }
@@ -6009,6 +6076,23 @@ function wireParentFloatTipHover() {
   wrap.addEventListener('mouseenter', openTip);
   wrap.addEventListener('mouseleave', scheduleCloseTip);
 }
+
+
+(function bindParentFloatRelayout() {
+  const gridArea = $('gridArea');
+  if (!gridArea || gridArea._selFloatScrollBound) return;
+  gridArea._selFloatScrollBound = true;
+  gridArea.addEventListener('scroll', function () {
+    if (parentSelection && shouldShowParentCanvasBadge(parentSelection)) {
+      placeParentFloat(parentSelection, { immediate: true });
+    }
+  }, { passive: true });
+  window.addEventListener('resize', function () {
+    if (parentSelection && shouldShowParentCanvasBadge(parentSelection)) {
+      placeParentFloat(parentSelection, { immediate: true });
+    }
+  });
+})();
 
 function bindParentSelectionFloat() {
   const gridArea = $('gridArea');
