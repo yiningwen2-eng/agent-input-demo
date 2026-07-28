@@ -1684,7 +1684,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?v=749nodrop?embed=1&v=744nofreeze"
+        src="agent-sidebar-embed-v74.html?v=7410fix?embed=1&v=744nofreeze"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -5813,6 +5813,25 @@ function isParentBadgeOn() {
   return parentBadgeState === 'on' || parentBadgeState === 'subscribed';
 }
 
+/** 表格始终有选区：若尚未框选，落到活动单元格（默认首个数据格） */
+function ensureParentHasSelection() {
+  if (parentSelection) return parentSelection;
+  // 默认选中 B2（演示表常见数据起点）；若网格更小则退回 A1
+  var r = 1, c = 1;
+  try {
+    if (!(COLS && COLS.length > c)) c = 0;
+    var table = $('gridTable');
+    if (table) {
+      var td = table.querySelector('td[data-r="' + r + '"][data-c="' + (COLS[c] || 'A') + '"]');
+      if (!td) { r = 0; c = 0; }
+    }
+  } catch (e) { r = 0; c = 0; }
+  parentSelection = { r1: r, c1: c, r2: r, c2: c };
+  paintParentSelection(parentSelection);
+  notifyParentSelectionToSidebar(parentSelection);
+  return parentSelection;
+}
+
 /** 建表生成后的对话层（iframe 已隐藏） */
 function isParentChatLayerActive() {
   const sidebar = $('aiSidebar');
@@ -6144,6 +6163,9 @@ function bindParentSelectionFloat() {
     if (parentSelection) onParentSelectionCommitted(parentSelection);
   });
 
+  // 页面加载即有选区（表格特性）
+  setTimeout(function () { ensureParentHasSelection(); }, 0); // init
+
   if (floatBtn) {
     floatBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -6209,19 +6231,21 @@ function bindAgentSidebarBridge() {
       return;
     }
     if (d.type === 'agent-sidebar-request-inject-current') {
-      if (isParentBadgeOn() && parentSelection) injectParentSelectionToSidebar();
+      ensureParentHasSelection();
+      // force：侧栏刚开启工具态，允许在 badge-state 乱序到达时仍写入
+      if (d.force || isParentBadgeOn()) {
+        if (d.force) parentBadgeState = 'on';
+        injectParentSelectionToSidebar();
+      }
       return;
     }
     if (d.type === 'agent-sidebar-badge-state') {
       parentBadgeState = d.state || 'off';
-      if (d.injectCurrent && isParentBadgeOn() && parentSelection) {
+      ensureParentHasSelection();
+      if (d.injectCurrent && isParentBadgeOn()) {
         setTimeout(function () { injectParentSelectionToSidebar(); }, 0);
       }
-      if (isParentBadgeOn() && parentSelection) {
-        placeParentFloat(parentSelection, { immediate: true });
-      } else {
-        hideParentFloat();
-      }
+      hideParentFloat(); /* 无角标主路径 */
       return;
     }
     if (d.type === 'agent-sidebar-locate-selection') {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent 输入框升级 · Demo v7.4.9 选区引用</title>
+<title>Agent 输入框升级 · Demo v7.4.10 选区引用</title>
 <style>
   :root {
     --bg-sidebar: #f7f7f7;
@@ -357,39 +357,24 @@
     right: -10px;
   }
 
-  /* v7.4.5 选区引用：图标工具态 + 下拉（可隐藏入口） */
-  .sel-ref-group {
-    display: inline-flex;
-    align-items: center;
-    margin-left: 2px;
-    border-radius: 8px;
-    position: relative;
-    flex-shrink: 0;
-  }
-  .sel-ref-group[hidden] { display: none !important; }
-  .sel-ref-group.on {
-    background: #eef8f2;
-  }
-  .sel-ref-btn {
+  /* v7.4.10 选区引用：单按钮工具态 */
+  .tool-btn.sel-ref-btn {
     width: 28px;
     height: 28px;
-    padding: 0;
-    border: none;
-    border-radius: 8px 0 0 8px;
-    background: transparent;
+    border-radius: 50%;
     color: #6b7280;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-family: inherit;
+    background: transparent;
     position: relative;
-    flex-shrink: 0;
   }
-  .sel-ref-btn:hover { background: #f3f4f6; color: #374151; }
-  .sel-ref-group.on .sel-ref-btn { color: #166534; }
-  .sel-ref-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
-  .sel-ref-btn .tip {
+  .tool-btn.sel-ref-btn:hover { background: #f3f4f6; color: #374151; }
+  .tool-btn.sel-ref-btn.on,
+  .tool-btn.sel-ref-btn.active {
+    background: #eef8f2 !important;
+    color: #166534 !important;
+    box-shadow: inset 0 0 0 1px #86efac;
+  }
+  .tool-btn.sel-ref-btn svg { width: 16px; height: 16px; }
+  .tool-btn.sel-ref-btn .tip {
     display: none;
     position: absolute;
     bottom: calc(100% + 8px);
@@ -404,63 +389,7 @@
     z-index: 30;
     pointer-events: none;
   }
-  .sel-ref-btn:hover .tip { display: block; }
-  .sel-ref-more {
-    width: 18px;
-    height: 28px;
-    padding: 0;
-    border: none;
-    border-radius: 0 8px 8px 0;
-    background: transparent;
-    color: #9ca3af;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
-  }
-  .sel-ref-more:hover { background: #f3f4f6; color: #374151; }
-  .sel-ref-more svg { width: 12px; height: 12px; }
-  .sel-ref-menu {
-    min-width: 220px;
-  }
-
-  #selRefMenu {
-    min-width: 220px;
-    max-width: min(280px, 92%);
-    z-index: 60;
-  }
-
-
-  .sel-ref-menu .menu-item {
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .sel-ref-menu .menu-item svg { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
-  .sel-ref-menu .menu-item-text {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    min-width: 0;
-    flex: 1;
-  }
-  .sel-ref-menu .menu-item-title {
-    font-size: 13px;
-    color: #111827;
-    font-weight: 500;
-  }
-  .sel-ref-menu .menu-item-sub {
-    font-size: 11px;
-    color: #9ca3af;
-    line-height: 1.3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-  }
-  .sel-ref-menu .menu-item.selected .menu-item-title { color: #166534; }
-  .sel-ref-menu .check { margin-left: auto; color: #1FAF68; font-size: 12px; }
+  .tool-btn.sel-ref-btn:hover .tip { display: block; }
 
   /* 询问条：无外框；选区芯片与输入区真实选区同款，后接按钮（引用后仅少按钮） */
   .sel-context-card {
@@ -1448,7 +1377,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4.9 · 选区引用单按钮</span>
+    <span class="demo-badge">v7.4.10 · 点击态+开启即写入</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -2183,12 +2112,23 @@
   }
   function injectCurrentSelectionNow() {
     if (!isBadgeOn()) return;
-    /* 嵌入父页时选区在父文档：优先让父页注入 */
+    /* 嵌入父页：选区在父表格，必须由父页写入（开启即生效） */
     if (window.parent && window.parent !== window) {
-      try { window.parent.postMessage({ type: "agent-sidebar-request-inject-current" }, "*"); } catch (e) {}
+      try {
+        window.parent.postMessage({
+          type: "agent-sidebar-request-inject-current",
+          force: true
+        }, "*");
+      } catch (e) {}
+      return;
     }
+    /* 独立页：用本地选区；若无选区则落到 A1 */
     var sel = selection;
-    if (!sel) return;
+    if (!sel) {
+      sel = { r1: 0, c1: 0, r2: 0, c2: 0 };
+      selection = sel;
+      if (typeof paintSelection === "function") paintSelection(sel);
+    }
     var snap = { r1: sel.r1, c1: sel.c1, r2: sel.r2, c2: sel.c2 };
     setTimeout(function () {
       addSelectionChip(snap);
@@ -2203,10 +2143,9 @@
     var tip = document.getElementById("selRefTip");
     if (btn) {
       btn.classList.toggle("on", badgeRefOn);
+      btn.classList.toggle("active", badgeRefOn);
       btn.setAttribute("aria-pressed", badgeRefOn ? "true" : "false");
     }
-    var group = document.getElementById("selRefGroup");
-    if (group) group.classList.toggle("on", badgeRefOn);
     if (tip) tip.textContent = badgeRefOn ? "选区引用 · 开" : "选区引用";
     syncSelRefEntryVisibility();
   }
@@ -4026,7 +3965,7 @@ html.agent-embed .sidebar.hidden {
 <div class="demo-settings-modal" id="demoSettingsModal">
   <div class="demo-settings-card">
     <h3>WPS AI 设置（Demo 模拟）</h3>
-    <p>v7.4.9：底栏 + → 选区引用图标 → 截图。无下拉。点图标开/关选区引用；开启立即写入当前选区，改选继续追加。当前工作表仍走 @。</p>
+    <p>v7.4.10：选区引用图标有开/关态。点开立即写入当前选区（表格始终有选区，默认至少活动格）；保持开则改选继续追加。无下拉。</p>
     <div class="row">
       <span>选区引用（工具态）</span>
       <div class="switch" id="switchBadgeEntry" role="switch" aria-checked="false"><i></i></div>
