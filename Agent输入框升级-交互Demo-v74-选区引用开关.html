@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent 输入框升级 · Demo v7.4.8 拆分按钮</title>
+<title>Agent 输入框升级 · Demo v7.4.9 选区引用</title>
 <style>
   :root {
     --bg-sidebar: #f7f7f7;
@@ -1448,7 +1448,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4.8 · 图标开关/箭头菜单</span>
+    <span class="demo-badge">v7.4.9 · 选区引用单按钮</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -1687,21 +1687,16 @@
                 <span class="tip">添加文件和更多</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
               </button>
-              <div class="sel-ref-group" id="selRefGroup">
-                <button type="button" class="sel-ref-btn" id="btnSelRefToggle" aria-pressed="false" aria-label="自由选择">
-                  <span class="tip" id="selRefTip">自由选择</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 8V5h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    <path d="M16 5h3v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    <path d="M19 16v3h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    <path d="M8 19H5v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    <path d="M12.2 10.2 14.8 19l1.2-3.2L19.2 14.5 12.2 10.2z" fill="#3b82f6" stroke="#2563eb" stroke-width="0.6" stroke-linejoin="round"/>
+              <button type="button" class="tool-btn sel-ref-btn" id="btnSelRefToggle" aria-pressed="false" aria-label="选区引用">
+                <span class="tip" id="selRefTip">选区引用</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 4H5v3"/>
+                    <path d="M16 4h3v3"/>
+                    <path d="M5 16v3h3"/>
+                    <path d="M19 16v3h-3"/>
+                    <rect x="8" y="8" width="8" height="8" rx="0.5" opacity="0.35"/>
                   </svg>
-                </button>
-                <button type="button" class="sel-ref-more" id="btnSelRefMore" aria-label="引用表格菜单" aria-haspopup="menu">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                </button>
-              </div>
+              </button>
               <!-- 设计稿剪刀：截图提问 -->
               <button class="tool-btn" type="button" id="btnScreenshot" aria-label="截图提问">
                 <span class="tip">截图提问</span>
@@ -1758,31 +1753,6 @@
               <div class="at-list-wrap" id="atList"></div>
             </div>
             <div id="atFlyout" aria-hidden="true"></div>
-          </div>
-
-          <!-- 选区引用下拉：入口显隐（全局偏好） -->
-          <div class="menu sel-ref-menu" id="selRefMenu" role="menu">
-            <button class="menu-item" type="button" id="btnSelRefCurrentSheet" role="menuitem">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
-              <span class="menu-item-text">
-                <span class="menu-item-title">当前工作表</span>
-                <span class="menu-item-sub" id="selRefSheetName">—</span>
-              </span>
-            </button>
-            <button class="menu-item" type="button" id="btnSelRefFreeSelect" role="menuitem">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 8V5h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                <path d="M16 5h3v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                <path d="M19 16v3h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                <path d="M8 19H5v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                <path d="M12.2 10.2 14.8 19l1.2-3.2L19.2 14.5 12.2 10.2z" fill="#3b82f6" stroke="#2563eb" stroke-width="0.6" stroke-linejoin="round"/>
-              </svg>
-              <span class="menu-item-text">
-                <span class="menu-item-title">自由选择</span>
-                <span class="menu-item-sub" id="selRefFreeSub">开：写入当前选区，改选继续追加</span>
-              </span>
-              <span class="check" id="selRefFreeCheck"></span>
-            </button>
           </div>
 
           <!-- 语音来源面板 -->
@@ -2237,13 +2207,7 @@
     }
     var group = document.getElementById("selRefGroup");
     if (group) group.classList.toggle("on", badgeRefOn);
-    if (tip) tip.textContent = badgeRefOn ? "自由选择 · 开" : "自由选择";
-    var freeChk = document.getElementById("selRefFreeCheck");
-    if (freeChk) freeChk.textContent = badgeRefOn ? "✓" : "";
-    var freeBtn = document.getElementById("btnSelRefFreeSelect");
-    if (freeBtn) freeBtn.classList.toggle("selected", badgeRefOn);
-    var sheetNameEl = document.getElementById("selRefSheetName");
-    if (sheetNameEl && typeof getActiveSheetName === "function") sheetNameEl.textContent = getActiveSheetName();
+    if (tip) tip.textContent = badgeRefOn ? "选区引用 · 开" : "选区引用";
     syncSelRefEntryVisibility();
   }
 
@@ -3156,38 +3120,8 @@
     }
     function toggleSelRef() {
       setBadgeRefOn(!badgeRefOn);
-      showToast(badgeRefOn ? "已开启自由选择：当前选区已进入" : "已关闭自由选择（已添加内容保留）");
+      showToast(badgeRefOn ? "已开启选区引用：当前选区已进入" : "已关闭选区引用（已添加内容保留）");
     }
-    function openSelRefMenu() {
-      var selRefMenu = document.getElementById("selRefMenu");
-      var anchor = document.getElementById("selRefGroup") || document.getElementById("btnSelRefMore") || document.getElementById("btnSelRefToggle");
-      if (!selRefMenu || !anchor) return;
-      closeMenus("selRef");
-      var sheetNameEl = document.getElementById("selRefSheetName");
-      if (sheetNameEl) sheetNameEl.textContent = getActiveSheetName();
-      var freeChk = document.getElementById("selRefFreeCheck");
-      if (freeChk) freeChk.textContent = badgeRefOn ? "✓" : "";
-      var freeBtn = document.getElementById("btnSelRefFreeSelect");
-      if (freeBtn) freeBtn.classList.toggle("selected", badgeRefOn);
-      /* 相对 input-card 定位（与 #uploadMenu 同构），禁止用 body 算坐标 */
-      var card = document.getElementById("inputCard") || anchor.closest(".input-card");
-      if (card) {
-        var a = anchor.getBoundingClientRect();
-        var c = card.getBoundingClientRect();
-        selRefMenu.style.left = Math.max(8, a.left - c.left) + "px";
-        selRefMenu.style.right = "auto";
-        selRefMenu.style.bottom = Math.max(8, c.bottom - a.top + 6) + "px";
-        selRefMenu.style.top = "auto";
-      } else {
-        selRefMenu.style.left = "36px";
-        selRefMenu.style.bottom = "calc(100% - 4px)";
-        selRefMenu.style.top = "auto";
-      }
-      selRefMenu.classList.add("show");
-      if (typeof syncSbBodyMenuOpen === "function") syncSbBodyMenuOpen();
-    }
-
-    /* 主图标 = 自由选择开关；箭头 = 打开菜单（拆分按钮，不同交互） */
     var btnSelRef = document.getElementById("btnSelRefToggle");
     if (btnSelRef) btnSelRef.addEventListener("click", function (e) {
       e.preventDefault();
@@ -3195,36 +3129,6 @@
       closeMenus();
       toggleSelRef();
     });
-    var btnSelRefMore = document.getElementById("btnSelRefMore");
-    if (btnSelRefMore) {
-      btnSelRefMore.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var menu = document.getElementById("selRefMenu");
-        if (menu && menu.classList.contains("show")) closeMenus();
-        else openSelRefMenu();
-      });
-    }
-    var btnSelRefCurrentSheet = document.getElementById("btnSelRefCurrentSheet");
-    if (btnSelRefCurrentSheet) {
-      btnSelRefCurrentSheet.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeMenus();
-        var sheetName = getActiveSheetName();
-        addAtChip({ kind: "sheet", name: "工作表 · " + sheetName });
-        showToast("已引用当前工作表：" + sheetName);
-      });
-    }
-    var btnSelRefFreeSelect = document.getElementById("btnSelRefFreeSelect");
-    if (btnSelRefFreeSelect) {
-      btnSelRefFreeSelect.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeMenus();
-        toggleSelRef();
-      });
-    }
     var btnRestoreSelRefEntry = document.getElementById("btnRestoreSelRefEntry");
     if (btnRestoreSelRefEntry) {
       btnRestoreSelRefEntry.addEventListener("click", function () {
@@ -3822,8 +3726,6 @@
       e.target.closest("#skillPanel") ||
       e.target.closest("#uploadMenu") ||
       e.target.closest("#voiceMenu") ||
-      e.target.closest("#selRefMenu") ||
-      e.target.closest("#selRefGroup") ||
       e.target.closest("#inputCard")
     ) {
       // keep menus open
@@ -4124,7 +4026,7 @@ html.agent-embed .sidebar.hidden {
 <div class="demo-settings-modal" id="demoSettingsModal">
   <div class="demo-settings-card">
     <h3>WPS AI 设置（Demo 模拟）</h3>
-    <p>v7.4.8：底栏 + → 选区(图标+箭头) → 截图。点图标开关「自由选择」；点箭头打开菜单（当前工作表 / 自由选择）。开启自由选择立即写入当前选区。@ 不变。</p>
+    <p>v7.4.9：底栏 + → 选区引用图标 → 截图。无下拉。点图标开/关选区引用；开启立即写入当前选区，改选继续追加。当前工作表仍走 @。</p>
     <div class="row">
       <span>选区引用（工具态）</span>
       <div class="switch" id="switchBadgeEntry" role="switch" aria-checked="false"><i></i></div>
