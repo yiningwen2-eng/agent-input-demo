@@ -1684,7 +1684,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?v=7410fix?embed=1&v=744nofreeze"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7411buildpanel"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -5950,15 +5950,22 @@ function notifyParentSelectionToSidebar(sel) {
 
 var _parentSelRefInjectTimer = null;
 var _parentSelRefInjectLock = false;
+function isBuildPanelVisible() {
+  return typeof currentState !== 'undefined' && currentState === State.SHOW;
+}
+
 function onParentSelectionCommitted(sel) {
   notifyParentSelectionToSidebar(sel);
   hideParentFloat();
+  /* 建表面板展示时：框选不自动开侧栏、不写入侧栏 */
+  if (isBuildPanelVisible()) return;
   /* 工具态：开关开则框选直接入对话（允许重复）
      延后到 mouseup 之后，避免同步 postMessage/focus 卡死 */
   if (!(sel && isParentBadgeOn()) || _parentSelRefInjectLock) return;
   if (_parentSelRefInjectTimer) clearTimeout(_parentSelRefInjectTimer);
   _parentSelRefInjectTimer = setTimeout(function () {
     _parentSelRefInjectTimer = null;
+    if (isBuildPanelVisible()) return;
     if (!parentSelection || !isParentBadgeOn()) return;
     _parentSelRefInjectLock = true;
     try {
@@ -6007,11 +6014,15 @@ function injectSelectionChipToSbInput(payload) {
 
 function injectParentSelectionToSidebar() {
   if (!parentSelection) return;
+  /* 建表面板展示中：禁止因选区自动弹出/抢占侧栏 */
+  if (isBuildPanelVisible()) {
+    updateGuide('建表面板展示中：框选不会自动打开侧边栏（选区引用仅在侧栏场景生效）');
+    return;
+  }
   const payload = parentSelectionPayload(parentSelection);
   const sidebar = $('aiSidebar');
   if (sidebar && !sidebar.classList.contains('show')) {
     sidebar.classList.add('show');
-    if (currentState === State.SHOW) closeAiPanelFully();
     postToAgentSidebar('agent-sidebar-set-sidebar-open', { open: true });
   }
   // 建表生成后的对话层：写入可见的继续提问框，勿切回 iframe 空态（否则会丢生成结果且选区进隐藏页）
