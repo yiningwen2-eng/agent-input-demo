@@ -1684,7 +1684,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7417closeoff"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7418keepinput"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -5196,17 +5196,14 @@ function bindEvents() {
         closeAiPanelFully();
         updateGuide('打开灵犀侧边栏 → 面板已关闭（互斥规则）');
       } else {
-        updateGuide('已打开 WPS 灵犀侧边栏');
+        updateGuide('已打开 WPS 灵犀侧边栏（输入框内容与已添加选区保留）');
       }
-      const body = $('sidebarBody');
-      if (body && !body.querySelector('.chat-msg')) {
-        restoreSidebarHome();
-      }
+      /* 关栏再开：保留 iframe/对话层输入框内容与已添加选区，禁止 restoreSidebarHome 清空 */
       syncAgentSidebarSheets();
       hideParentFloat();
     } else {
       turnOffSelRefWithSidebarClose();
-      updateGuide('已关闭侧边栏（选区引用已自动关闭；已添加内容保留）');
+      updateGuide('已关闭侧边栏（选区引用已自动关闭；输入框内容与已添加选区保留）');
     }
   });
 
