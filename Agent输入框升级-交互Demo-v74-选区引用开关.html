@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent 输入框升级 · Demo v7.4.7 修复选区菜单</title>
+<title>Agent 输入框升级 · Demo v7.4.8 拆分按钮</title>
 <style>
   :root {
     --bg-sidebar: #f7f7f7;
@@ -1448,7 +1448,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4.7 · 修复选区菜单</span>
+    <span class="demo-badge">v7.4.8 · 图标开关/箭头菜单</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -1688,8 +1688,8 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
               </button>
               <div class="sel-ref-group" id="selRefGroup">
-                <button type="button" class="sel-ref-btn" id="btnSelRefToggle" aria-pressed="false" aria-label="引用表格" aria-haspopup="menu">
-                  <span class="tip" id="selRefTip">引用表格（当前工作表 / 自由选择）</span>
+                <button type="button" class="sel-ref-btn" id="btnSelRefToggle" aria-pressed="false" aria-label="自由选择">
+                  <span class="tip" id="selRefTip">自由选择</span>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M5 8V5h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     <path d="M16 5h3v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -1779,7 +1779,7 @@
               </svg>
               <span class="menu-item-text">
                 <span class="menu-item-title">自由选择</span>
-                <span class="menu-item-sub" id="selRefFreeSub">开启后，当前选区立即进入；之后框选继续追加</span>
+                <span class="menu-item-sub" id="selRefFreeSub">开：写入当前选区，改选继续追加</span>
               </span>
               <span class="check" id="selRefFreeCheck"></span>
             </button>
@@ -2237,7 +2237,7 @@
     }
     var group = document.getElementById("selRefGroup");
     if (group) group.classList.toggle("on", badgeRefOn);
-    if (tip) tip.textContent = badgeRefOn ? "自由选择 · 开（当前选区已可进入，框选继续追加）" : "引用表格（当前工作表 / 自由选择）";
+    if (tip) tip.textContent = badgeRefOn ? "自由选择 · 开" : "自由选择";
     var freeChk = document.getElementById("selRefFreeCheck");
     if (freeChk) freeChk.textContent = badgeRefOn ? "✓" : "";
     var freeBtn = document.getElementById("btnSelRefFreeSelect");
@@ -3156,7 +3156,7 @@
     }
     function toggleSelRef() {
       setBadgeRefOn(!badgeRefOn);
-      showToast(badgeRefOn ? "已开启自由选择：当前选区已进入，之后框选继续追加" : "已关闭自由选择（已挂载芯片保留）");
+      showToast(badgeRefOn ? "已开启自由选择：当前选区已进入" : "已关闭自由选择（已添加内容保留）");
     }
     function openSelRefMenu() {
       var selRefMenu = document.getElementById("selRefMenu");
@@ -3187,13 +3187,13 @@
       if (typeof syncSbBodyMenuOpen === "function") syncSbBodyMenuOpen();
     }
 
+    /* 主图标 = 自由选择开关；箭头 = 打开菜单（拆分按钮，不同交互） */
     var btnSelRef = document.getElementById("btnSelRefToggle");
     if (btnSelRef) btnSelRef.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      var menu = document.getElementById("selRefMenu");
-      if (menu && menu.classList.contains("show")) closeMenus();
-      else openSelRefMenu();
+      closeMenus();
+      toggleSelRef();
     });
     var btnSelRefMore = document.getElementById("btnSelRefMore");
     if (btnSelRefMore) {
@@ -4124,7 +4124,7 @@ html.agent-embed .sidebar.hidden {
 <div class="demo-settings-modal" id="demoSettingsModal">
   <div class="demo-settings-card">
     <h3>WPS AI 设置（Demo 模拟）</h3>
-    <p>v7.4.6：底栏 + → 选区菜单 → 截图。菜单含「当前工作表」「自由选择」。开启自由选择时立即写入当前选区，之后框选继续追加。@ 当前工作表不变。</p>
+    <p>v7.4.8：底栏 + → 选区(图标+箭头) → 截图。点图标开关「自由选择」；点箭头打开菜单（当前工作表 / 自由选择）。开启自由选择立即写入当前选区。@ 不变。</p>
     <div class="row">
       <span>选区引用（工具态）</span>
       <div class="switch" id="switchBadgeEntry" role="switch" aria-checked="false"><i></i></div>
