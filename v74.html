@@ -4929,13 +4929,14 @@ function bindEvents() {
       updateSbSendBtn();
       return;
     }
-    // 选区芯片点击主体 → 画布回选
+    // 选区芯片点击主体 → 画布回选（同时只允许一个芯片选中态）
     const selChip = e.target.closest('.chip.selection');
     if (selChip && !e.target.closest('.chip-x')) {
       e.preventDefault();
       const sb = $('sbInput');
       if (sb) sb.querySelectorAll('.chip.selection').forEach((n) => n.classList.remove('is-active'));
       selChip.classList.add('is-active');
+      postToAgentSidebar('agent-sidebar-clear-chip-active');
       locateParentSelectionFromChip({
         sheet: selChip.dataset.sheet || '',
         range: selChip.dataset.range || '',
@@ -5788,7 +5789,11 @@ function clearParentSelectionUI() {
 function paintParentSelection(sel) {
   const table = $('gridTable');
   if (!table) return;
-  table.querySelectorAll('td.range-selected').forEach((td) => td.classList.remove('range-selected'));
+  /* 画布同时只保留一个选区高亮 */
+  table.querySelectorAll('td.range-selected, td.locate-flash').forEach((td) => {
+    td.classList.remove('range-selected');
+    td.classList.remove('locate-flash');
+  });
   if (!sel) return;
   for (let r = sel.r1; r <= sel.r2; r++) {
     for (let c = sel.c1; c <= sel.c2; c++) {
@@ -6094,6 +6099,9 @@ function locateParentSelectionFromChip(meta) {
   paintParentSelection(sel);
   const table = $('gridTable');
   if (table) {
+    /* 回选：活动格并入该选区左上角，避免旧活动格与新区并存成「多选区」观感 */
+    const anchor = table.querySelector('td[data-r="' + sel.r1 + '"][data-c="' + COLS[sel.c1] + '"]');
+    if (anchor) selectGridCell(anchor);
     for (let r = sel.r1; r <= sel.r2; r++) {
       for (let c = sel.c1; c <= sel.c2; c++) {
         const td = table.querySelector('td[data-r="' + r + '"][data-c="' + COLS[c] + '"]');
@@ -6103,7 +6111,6 @@ function locateParentSelectionFromChip(meta) {
         }
       }
     }
-    const anchor = table.querySelector('td[data-r="' + sel.r1 + '"][data-c="' + COLS[sel.c1] + '"]');
     if (anchor && anchor.scrollIntoView) anchor.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
   }
   if (shouldShowParentCanvasBadge(sel)) placeParentFloat(sel, { immediate: true });
