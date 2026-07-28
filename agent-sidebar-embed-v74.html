@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Agent 输入框升级 · Demo v7.4.3 选区引用工具态</title>
+<title>Agent 输入框升级 · Demo v7.4.4 选区引用工具态</title>
 <style>
   :root {
     --bg-sidebar: #f7f7f7;
@@ -1386,7 +1386,7 @@
         </div>
       </div>
     </div>
-    <span class="demo-badge">v7.4.3 · 选区引用工具态（修复侧栏开关）</span>
+    <span class="demo-badge">v7.4.4 · 选区引用（修复框选卡死）</span>
     <a class="demo-badge" href="./Agent输入框升级-交互Demo-v73-轻量选区条.html" style="margin-left:6px;text-decoration:none;border-style:solid">打开 v7.3 轻量版 Demo</a>
     <button type="button" id="btnDemoBadgeSettings" class="demo-badge" style="cursor:pointer;margin-left:6px;border-style:solid;border-color:#1FAF68;color:#166534">Demo：角标设置</button>
     <button type="button" id="btnResetBadgeDemo" class="demo-badge" style="cursor:pointer;margin-left:6px" title="重置为关：侧栏开着也不会出角标">重置为关</button>
@@ -1796,7 +1796,8 @@
     addSelectionFromParent: function (payload) {
       const label = (payload && payload.label) || "";
       if (!label) return;
-      /* 允许同选区重复添加 */
+      /* 允许同选区重复添加；跳过强焦点，避免父页 mouseup 阶段卡死 */
+      window.__daSkipFocusOnce = true;
       pushContextChip({
         id: "sel-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
         type: "selection",
@@ -2243,14 +2244,23 @@
     /* v7.4.2：不再展示角标 */
     return false;
   }
+  var _selRefInjectLock = false;
   function onSelectionCommitted(sel) {
     syncSelContextCard(sel);
     hideFloat();
-    /* Select Element 式：开关开 + 侧栏开 + 完成框选 → 直接入芯片（允许重复） */
-    if (sel && sidebarOpen && isBadgeOn()) {
-      addSelectionChip(sel);
-      showToast("已引用选区：" + sheetRangeLabel(sel));
-    }
+    /* Select Element 式：开关开 + 侧栏开 + 完成框选 → 直接入芯片（允许重复）
+       必须异步：mouseup 同步改 contenteditable/focus 会卡死页面 */
+    if (!(sel && sidebarOpen && isBadgeOn()) || _selRefInjectLock) return;
+    _selRefInjectLock = true;
+    var snap = { r1: sel.r1, c1: sel.c1, r2: sel.r2, c2: sel.c2 };
+    setTimeout(function () {
+      try {
+        addSelectionChip(snap);
+        showToast("已引用选区：" + sheetRangeLabel(snap));
+      } finally {
+        _selRefInjectLock = false;
+      }
+    }, 0);
   }
 
   function hideFloat() {
@@ -2644,19 +2654,23 @@
 
   /** 在光标处插入节点；插完后光标落在内容后。不先 focus，避免光标被打回开头。 */
   function settleCaretAfterInsert(anchor) {
+    const skipFocus = !!window.__daSkipFocusOnce;
+    window.__daSkipFocusOnce = false;
     const go = () => {
       if (!anchor || !anchor.parentNode || !userInput.contains(anchor)) return;
       placeCaretAfter(anchor);
-      if (document.activeElement !== userInput) {
+      if (!skipFocus && document.activeElement !== userInput) {
         try { userInput.focus({ preventScroll: true }); } catch (e) { userInput.focus(); }
       }
       placeCaretAfter(anchor);
     };
     go();
-    requestAnimationFrame(() => {
-      go();
-      requestAnimationFrame(go);
-    });
+    if (!skipFocus) {
+      requestAnimationFrame(() => {
+        go();
+        requestAnimationFrame(go);
+      });
+    }
   }
 
   function insertInlineNode(node) {
@@ -2938,13 +2952,17 @@
   function addSelectionChip(sel) {
     const label = sheetRangeLabel(sel);
     /* v7.4.2：同选区允许反复添加 */
+    window.__daSkipFocusOnce = true;
     pushContextChip({
       id: "c" + chipIdSeq++,
       type: "selection",
       label,
       meta: { sheet: getActiveSheetName(), range: rangeLabel(sel) },
     });
-    userInput.focus();
+    /* 不在 mouseup 同期强抢焦点，避免卡死；稍后轻量聚焦 */
+    setTimeout(function () {
+      try { if (userInput) userInput.focus({ preventScroll: true }); } catch (e) {}
+    }, 30);
   }
 
   function parseRangeLabel(rangeStr) {

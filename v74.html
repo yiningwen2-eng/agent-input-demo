@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WPS表格AI建表 - 交互Demo（v7.4.3 · 选区引用工具态（修复侧栏））</title>
+<title>WPS表格AI建表 - 交互Demo（v7.4.4 · 选区引用（修复框选卡死））</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #f0f0f0; overflow: hidden; height: 100vh; }
@@ -1684,7 +1684,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=743fixsidebar"
+        src="agent-sidebar-embed-v74.html?embed=1&v=744nofreeze"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -5929,13 +5929,25 @@ function notifyParentSelectionToSidebar(sel) {
   postToAgentSidebar('agent-sidebar-selection-preview', payload);
 }
 
+var _parentSelRefInjectTimer = null;
+var _parentSelRefInjectLock = false;
 function onParentSelectionCommitted(sel) {
   notifyParentSelectionToSidebar(sel);
   hideParentFloat();
-  /* 工具态：开关开则框选直接入对话（允许重复） */
-  if (sel && isParentBadgeOn()) {
-    injectParentSelectionToSidebar();
-  }
+  /* 工具态：开关开则框选直接入对话（允许重复）
+     延后到 mouseup 之后，避免同步 postMessage/focus 卡死 */
+  if (!(sel && isParentBadgeOn()) || _parentSelRefInjectLock) return;
+  if (_parentSelRefInjectTimer) clearTimeout(_parentSelRefInjectTimer);
+  _parentSelRefInjectTimer = setTimeout(function () {
+    _parentSelRefInjectTimer = null;
+    if (!parentSelection || !isParentBadgeOn()) return;
+    _parentSelRefInjectLock = true;
+    try {
+      injectParentSelectionToSidebar();
+    } finally {
+      setTimeout(function () { _parentSelRefInjectLock = false; }, 50);
+    }
+  }, 0);
 }
 
 function normalizeParentSel(a, b) {
@@ -5991,12 +6003,11 @@ function injectParentSelectionToSidebar() {
     return;
   }
   showSidebarAgentHome();
-  syncAgentSidebarSheets();
   postToAgentSidebar('agent-sidebar-add-selection', payload);
-  postToAgentSidebar('agent-sidebar-focus');
-  if (shouldShowParentCanvasBadge(parentSelection)) {
-    placeParentFloat(parentSelection, { immediate: true });
-  }
+  /* 不在选区提交同期 focus iframe，避免卡死；稍后轻量聚焦 */
+  setTimeout(function () {
+    postToAgentSidebar('agent-sidebar-focus');
+  }, 40);
   updateGuide('已引用选区「' + payload.label + '」（可继续框选；同选区可重复添加）');
 }
 
