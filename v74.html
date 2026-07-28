@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!-- demo-cache: caret-settle-v1 -->
 <html lang="zh-CN">
 <head>
@@ -1528,11 +1528,11 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
   <div class="sel-ref-mode-panel" id="selRefModePanel" aria-label="选区开栏策略对比">
     <div class="sel-ref-mode-title">选区 · 开栏策略对比（并存）</div>
     <div class="sel-ref-mode-btns">
-      <button type="button" class="sel-ref-mode-btn on" id="selRefModeLegacy" data-mode="legacy">开栏即写入<br><span style="font-weight:400;opacity:.85">现有</span></button>
+      <button type="button" class="sel-ref-mode-btn on" id="selRefModeLegacy" data-mode="legacy">开栏写当前<br><span style="font-weight:400;opacity:.85">现有</span></button>
       <button type="button" class="sel-ref-mode-btn" id="selRefModeConfirm" data-mode="confirm">再选才写入<br><span style="font-weight:400;opacity:.85">新设计</span></button>
     </div>
-    <div class="sel-ref-mode-hint" id="selRefModeHint">当前：开栏且开关已开 → 立刻写入当前选区</div>
-    <div class="sel-ref-mode-steps">对比：开侧栏→开选区引用→关侧栏→点单元格→再开侧栏</div>
+    <div class="sel-ref-mode-hint" id="selRefModeHint">当前：开栏且开关已开 → 只写入此刻当前选区（不是历史全部）</div>
+    <div class="sel-ref-mode-steps">对比：开侧栏→开选区引用→关侧栏→点单元格→再开侧栏<br>两种模式都不会把「曾经选过的全部区域」一次性写入</div>
   </div>
 
   <!-- Ribbon -->
@@ -1753,7 +1753,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7413abmode"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7413abmode2"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
