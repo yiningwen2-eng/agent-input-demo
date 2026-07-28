@@ -357,7 +357,7 @@
     right: -10px;
   }
 
-  /* v7.4.10 选区引用：单按钮工具态 */
+  /* v7.4.10 选区引用：单按钮工具态（强调「状态」而非一次性动作） */
   .tool-btn.sel-ref-btn {
     width: 28px;
     height: 28px;
@@ -369,9 +369,13 @@
   .tool-btn.sel-ref-btn:hover { background: #f3f4f6; color: #374151; }
   .tool-btn.sel-ref-btn.on,
   .tool-btn.sel-ref-btn.active {
-    background: #eef8f2 !important;
+    background: #dcfce7 !important;
     color: #166534 !important;
-    box-shadow: inset 0 0 0 1px #86efac;
+    box-shadow: inset 0 0 0 1.5px #22c55e, 0 0 0 3px rgba(34, 197, 94, 0.18);
+  }
+  .tool-btn.sel-ref-btn.on svg,
+  .tool-btn.sel-ref-btn.active svg {
+    stroke: #15803d;
   }
   .tool-btn.sel-ref-btn svg { width: 16px; height: 16px; }
   .tool-btn.sel-ref-btn .tip {
@@ -383,13 +387,41 @@
     background: #111827;
     color: #fff;
     font-size: 11px;
-    padding: 5px 8px;
+    line-height: 1.4;
+    padding: 6px 9px;
     border-radius: 6px;
-    white-space: nowrap;
+    white-space: normal;
+    width: max-content;
+    max-width: 220px;
+    text-align: left;
     z-index: 30;
     pointer-events: none;
   }
   .tool-btn.sel-ref-btn:hover .tip { display: block; }
+
+  /* 开态轻提示：教育「持续状态 / 框选即加入」 */
+  .sel-ref-state-hint {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin: 0 12px 6px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .sel-ref-state-hint.show { display: flex; }
+  .sel-ref-state-hint .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+  }
 
   /* 询问条：无外框；选区芯片与输入区真实选区同款，后接按钮（引用后仅少按钮） */
   .sel-context-card {
@@ -1610,14 +1642,19 @@
             ></div>
           </div>
 
+          <div class="sel-ref-state-hint" id="selRefStateHint" aria-live="polite">
+            <span class="dot" aria-hidden="true"></span>
+            <span>选区引用已开启 · 框选将自动加入</span>
+          </div>
+
           <div class="input-toolbar">
             <div class="toolbar-left">
               <button class="tool-btn" type="button" id="btnPlus" title="添加文件和更多" aria-label="添加文件和更多">
                 <span class="tip">添加文件和更多</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
               </button>
-              <button type="button" class="tool-btn sel-ref-btn" id="btnSelRefToggle" aria-pressed="false" aria-label="选区引用">
-                <span class="tip" id="selRefTip">选区引用</span>
+              <button type="button" class="tool-btn sel-ref-btn" id="btnSelRefToggle" aria-pressed="false" aria-label="选区引用" title="选区引用">
+                <span class="tip" id="selRefTip">选区引用 · 关（打开后，框选将自动加入）</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M8 4H5v3"/>
                     <path d="M16 4h3v3"/>
@@ -2193,12 +2230,25 @@
   function syncSelRefToggleUI() {
     var btn = document.getElementById("btnSelRefToggle");
     var tip = document.getElementById("selRefTip");
+    var hint = document.getElementById("selRefStateHint");
     if (btn) {
       btn.classList.toggle("on", badgeRefOn);
       btn.classList.toggle("active", badgeRefOn);
       btn.setAttribute("aria-pressed", badgeRefOn ? "true" : "false");
+      btn.setAttribute(
+        "aria-label",
+        badgeRefOn ? "选区引用已开启" : "选区引用已关闭"
+      );
+      btn.title = badgeRefOn
+        ? "选区引用 · 开（框选将自动加入；再点关闭）"
+        : "选区引用 · 关（打开后，框选将自动加入）";
     }
-    if (tip) tip.textContent = badgeRefOn ? "选区引用 · 开" : "选区引用";
+    if (tip) {
+      tip.textContent = badgeRefOn
+        ? "选区引用 · 开（框选将自动加入；再点关闭）"
+        : "选区引用 · 关（打开后，框选将自动加入）";
+    }
+    if (hint) hint.classList.toggle("show", !!badgeRefOn);
     syncSelRefEntryVisibility();
   }
 
@@ -3131,7 +3181,11 @@
     }
     function toggleSelRef() {
       setBadgeRefOn(!badgeRefOn);
-      showToast(badgeRefOn ? "已开启选区引用：当前选区已进入" : "已关闭选区引用（已添加内容保留）");
+      showToast(
+        badgeRefOn
+          ? "已开启选区引用：当前选区已加入；之后框选将自动加入"
+          : "已关闭选区引用（已添加内容保留；不再自动加入）"
+      );
     }
     var btnSelRef = document.getElementById("btnSelRefToggle");
     if (btnSelRef) btnSelRef.addEventListener("click", function (e) {
