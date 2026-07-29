@@ -3492,6 +3492,30 @@
     }
   }
 
+  function isEmbedWithParent() {
+    return /(?:\?|&)embed=1(?:&|$)/.test(location.search || "") && window.parent && window.parent !== window;
+  }
+
+  function buildAtFlyoutPayload(drillTo) {
+    var title = drillTo === "sheets" ? "工作表" : (drillTo === "recent" ? "最近" : "历史会话");
+    var items = [];
+    if (drillTo === "sheets") {
+      var active = getActiveSheetName();
+      getWorkbookSheetNames().forEach(function (name) {
+        items.push({ kind: "sheet", name: name, sheetName: name, isActive: name === active });
+      });
+    } else if (drillTo === "recent") {
+      ALL_RECENT_REFS.slice(0, 48).forEach(function (r) {
+        items.push({ kind: "file", name: r.name, ftype: r.ftype || "sheet" });
+      });
+    } else if (drillTo === "chats") {
+      PAST_CHATS.forEach(function (r) {
+        items.push({ kind: "chat", name: r.name, sub: r.sub || "" });
+      });
+    }
+    return { drillTo: drillTo, title: title, showSearch: drillTo === "sheets", items: items };
+  }
+
   function positionAtFlyoutFixed() {
     if (!atPanel || !atFlyout) return;
     var primary = atPanel.getBoundingClientRect();
@@ -3499,15 +3523,15 @@
     var maxH = Math.min(320, window.innerHeight - 24);
     atFlyout.style.width = fw + "px";
     atFlyout.style.maxHeight = maxH + "px";
-    /* 先显示才能量高度 */
     atFlyout.classList.add("show");
     var fh = Math.min(maxH, atFlyout.offsetHeight || 240);
     var gap = 8;
-    /* 优先左侧（侧栏内右侧易被裁切）；左侧不够再右侧 */
-    var placeLeft = primary.left >= (fw + 16);
-    var left = placeLeft ? (primary.left - fw - gap) : (primary.right + gap);
-    if (left < 8) left = 8;
-    if (left + fw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - fw - 8);
+    /* 独立页：强制一级左侧，且不覆盖一级 */
+    var left = primary.left - fw - gap;
+    if (left < 8) left = primary.right + gap;
+    if (left + fw > window.innerWidth - 8 && primary.left - fw - gap >= 8) {
+      left = primary.left - fw - gap;
+    }
     var top = primary.top;
     if (top + fh > window.innerHeight - 8) top = Math.max(8, window.innerHeight - fh - 8);
     atFlyout.style.position = "fixed";
@@ -3518,7 +3542,50 @@
     atFlyout.style.zIndex = "10050";
   }
 
+  function showAtFlyoutFor(drillTo, anchorBtn) {
+    if (!isAtHoverMode() || !drillTo) return;
+    clearTimeout(atHoverTimer);
+    atFlyoutHoverKey = drillTo;
+    if (atList) {
+      atList.querySelectorAll(".at-item.is-hovering").forEach(function (el) {
+        el.classList.remove("is-hovering");
+      });
+    }
+    if (anchorBtn) anchorBtn.classList.add("is-hovering");
+
+    /* 嵌入侧栏：二级浮到父页面画布，固定在一级左侧，避免遮挡/裁切 */
+    if (isEmbedWithParent()) {
+      if (atFlyout) {
+        atFlyout.classList.remove("show");
+        atFlyout.innerHTML = "";
+      }
+      var rect = atPanel.getBoundingClientRect();
+      try {
+        window.parent.postMessage({
+          type: "agent-sidebar-at-flyout",
+          action: "show",
+          primaryRect: {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height
+          },
+          payload: buildAtFlyoutPayload(drillTo)
+        }, "*");
+      } catch (e) {}
+      return;
+    }
+
+    ensureAtFlyoutOnBody();
+    fillAtFlyout(drillTo);
+    atFlyout.setAttribute("aria-hidden", "false");
+    positionAtFlyoutFixed();
+  }
+
   function fillAtFlyout(drillTo) {
+    if (!atFlyout) return;
     atFlyout.innerHTML = "";
     var title = document.createElement("div");
     title.className = "at-flyout-title";
@@ -3570,42 +3637,48 @@
     }
   }
 
-  function showAtFlyoutFor(drillTo, anchorBtn) {
-    if (!isAtHoverMode() || !drillTo) return;
-    clearTimeout(atHoverTimer);
-    atFlyoutHoverKey = drillTo;
-    ensureAtFlyoutOnBody();
-    fillAtFlyout(drillTo);
-    atFlyout.setAttribute("aria-hidden", "false");
-    positionAtFlyoutFixed();
-    if (atList) {
-      atList.querySelectorAll(".at-item.is-hovering").forEach(function (el) {
-        el.classList.remove("is-hovering");
-      });
-    }
-    if (anchorBtn) anchorBtn.classList.add("is-hovering");
-  }
-
   function scheduleHideAtFlyout() {
     clearTimeout(atHoverTimer);
     atHoverTimer = setTimeout(function () {
       hideAtFlyout();
-    }, 200);
+    }, 220);
   }
 
   function hideAtFlyout() {
     clearTimeout(atHoverTimer);
-    if (!atFlyout) return;
-    atFlyout.classList.remove("show");
-    atFlyout.setAttribute("aria-hidden", "true");
-    atFlyout.innerHTML = "";
-    atFlyoutPinned = false;
     atFlyoutHoverKey = "";
+    atFlyoutPinned = false;
     if (atList) {
       atList.querySelectorAll(".at-item.is-hovering").forEach(function (el) {
         el.classList.remove("is-hovering");
       });
     }
+    if (atFlyout) {
+      atFlyout.classList.remove("show");
+      atFlyout.setAttribute("aria-hidden", "true");
+      atFlyout.innerHTML = "";
+    }
+    if (isEmbedWithParent()) {
+      try {
+        window.parent.postMessage({ type: "agent-sidebar-at-flyout", action: "hide" }, "*");
+      } catch (e) {}
+    }
+  }
+
+  function pickAtFlyoutItemFromParent(item) {
+    if (!item) return;
+    if (item.kind === "sheet") {
+      addAtChip({ kind: "sheet", name: "工作表 · " + (item.sheetName || item.name || "") });
+    } else {
+      addAtChip(item);
+    }
+    hideAtFlyout();
+  }
+
+  if (window.AgentSidebarDemo) {
+    window.AgentSidebarDemo.pickAtFlyoutItem = pickAtFlyoutItemFromParent;
+    window.AgentSidebarDemo.stayAtFlyout = function () { clearTimeout(atHoverTimer); };
+    window.AgentSidebarDemo.scheduleHideAtFlyout = scheduleHideAtFlyout;
   }
 
   if (atFlyout) {
@@ -3627,6 +3700,12 @@
     });
     btn.addEventListener("mouseleave", function () {
       if (!isAtHoverMode()) return;
+      /* 嵌入态二级在父页画布左侧，需穿过一级才能移入，放宽关闭时延 */
+      if (isEmbedWithParent()) {
+        clearTimeout(atHoverTimer);
+        atHoverTimer = setTimeout(function () { hideAtFlyout(); }, 480);
+        return;
+      }
       scheduleHideAtFlyout();
     });
   }
@@ -4303,6 +4382,21 @@ html.agent-embed .sidebar.hidden {
     if (d.type === "agent-sidebar-at-submenu-mode") {
       if (window.AgentSidebarDemo && typeof window.AgentSidebarDemo.setAtSubmenuMode === "function") {
         window.AgentSidebarDemo.setAtSubmenuMode(d.mode === "hover" ? "hover" : "click");
+      }
+    }
+    if (d.type === "agent-sidebar-at-flyout-pick") {
+      if (window.AgentSidebarDemo && typeof window.AgentSidebarDemo.pickAtFlyoutItem === "function") {
+        window.AgentSidebarDemo.pickAtFlyoutItem(d.item || d);
+      }
+    }
+    if (d.type === "agent-sidebar-at-flyout-stay") {
+      if (window.AgentSidebarDemo && typeof window.AgentSidebarDemo.stayAtFlyout === "function") {
+        window.AgentSidebarDemo.stayAtFlyout();
+      }
+    }
+    if (d.type === "agent-sidebar-at-flyout-leave") {
+      if (window.AgentSidebarDemo && typeof window.AgentSidebarDemo.scheduleHideAtFlyout === "function") {
+        window.AgentSidebarDemo.scheduleHideAtFlyout();
       }
     }
     if (d.type === "agent-sidebar-set-sidebar-open") {
