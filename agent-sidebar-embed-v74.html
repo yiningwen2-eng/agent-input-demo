@@ -1194,11 +1194,12 @@
   #atFlyout {
     display: none;
     box-sizing: border-box;
+    width: 280px;
     background: #fff;
     border: 1px solid #e8e8e8;
-    border-radius: 10px;
+    border-radius: 12px;
     box-shadow: 0 8px 28px rgba(0,0,0,.16);
-    padding: 8px 6px 10px;
+    padding: 8px 0 10px;
     overflow: hidden;
     flex-direction: column;
     z-index: 10050;
@@ -1210,26 +1211,38 @@
     font-size: 12px;
     font-weight: 600;
     color: #888;
-    padding: 4px 8px 8px;
+    padding: 4px 14px 8px;
+    flex-shrink: 0;
   }
   #atFlyout .at-flyout-list {
-    max-height: min(240px, calc(100vh - 120px));
+    display: block;
+    width: 100%;
+    max-height: min(280px, calc(100vh - 120px));
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding: 0 6px;
+    box-sizing: border-box;
   }
   #atPanel.at-hover-mode .at-item[data-at-id^="cat-"].is-hovering {
     background: #f0f0f0;
   }
-  #atPanel .at-ftype {
+  #atPanel .at-ftype,
+  #atFlyout .at-ftype {
     width: 28px; height: 28px; border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  #atPanel .at-ftype svg { width: 18px; height: 18px; display: block; }
-  #atPanel .at-ftype.sheet { background: #e8f8ef; }
-  #atPanel .at-ftype.doc { background: #e8f1ff; }
-  #atPanel .at-ftype.otl { background: #f3e8ff; }
-  #atPanel .at-ftype.chat {
+  #atPanel .at-ftype svg,
+  #atFlyout .at-ftype svg { width: 18px; height: 18px; display: block; }
+  #atPanel .at-ftype.sheet,
+  #atFlyout .at-ftype.sheet { background: #e8f8ef; }
+  #atPanel .at-ftype.doc,
+  #atFlyout .at-ftype.doc { background: #e8f1ff; }
+  #atPanel .at-ftype.otl,
+  #atFlyout .at-ftype.otl { background: #f3e8ff; }
+  #atPanel .at-ftype.chat,
+  #atFlyout .at-ftype.chat {
     background: linear-gradient(145deg, #f0e9ff, #e8f7f2);
     border: 1px solid #e4ddf7;
   }
@@ -1248,17 +1261,36 @@
     font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1;
   }
   #atPanel .at-back:hover { color: #111; }
-  #atPanel .at-item {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 9px 10px; border-radius: 8px;
-    font-size: 13px; color: #333; text-align: left;
+  #atPanel .at-item,
+  #atFlyout .at-item {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 13px;
+    color: #333;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
   }
-  #atPanel .at-item:hover { background: #f3f4f6; }
-  #atPanel .at-item.is-active {
+  #atPanel .at-item:hover,
+  #atFlyout .at-item:hover { background: #f3f4f6; }
+  #atPanel .at-item.is-active,
+  #atFlyout .at-item.is-active {
     background: #f0f0f0;
   }
-  #atPanel .at-item.is-active:hover { background: #e8e8e8; }
-  #atPanel .at-sheet-search {
+  #atPanel .at-item.is-active:hover,
+  #atFlyout .at-item.is-active:hover { background: #e8e8e8; }
+  #atPanel .at-sheet-search,
+  #atFlyout .at-sheet-search {
+    display: block;
     width: 100%;
     box-sizing: border-box;
     margin: 0 0 6px;
@@ -1269,27 +1301,36 @@
     outline: none;
     font-family: inherit;
   }
-  #atPanel .at-icon {
+  #atPanel .at-icon,
+  #atFlyout .at-icon {
     width: 28px; height: 28px; border-radius: 6px;
     background: #1FAF68; color: #fff; font-size: 11px; font-weight: 700;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  #atPanel .at-icon.sheet { background: #3b82f6; }
-  #atPanel .at-icon.chat { background: #8b5cf6; }
-  #atPanel .at-icon.folder { background: #64748b; }
-  #atPanel .at-meta { min-width: 0; flex: 1; }
-  #atPanel .at-name {
+  #atPanel .at-icon.sheet,
+  #atFlyout .at-icon.sheet { background: #3b82f6; }
+  #atPanel .at-icon.chat,
+  #atFlyout .at-icon.chat { background: #8b5cf6; }
+  #atPanel .at-icon.folder,
+  #atFlyout .at-icon.folder { background: #64748b; }
+  #atPanel .at-meta,
+  #atFlyout .at-meta { min-width: 0; flex: 1; overflow: hidden; }
+  #atPanel .at-name,
+  #atFlyout .at-name {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px;
   }
-  #atPanel .at-name-main {
+  #atPanel .at-name-main,
+  #atFlyout .at-name-main {
     font-size: 13px; line-height: 1.25;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  #atPanel .at-name-sheet {
+  #atPanel .at-name-sheet,
+  #atFlyout .at-name-sheet {
     font-size: 11px; color: #999; margin-top: 2px; line-height: 1.2;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  #atPanel .at-sub { font-size: 11px; color: #999; margin-top: 1px; }
+  #atPanel .at-sub,
+  #atFlyout .at-sub { font-size: 11px; color: #999; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #atPanel .at-enter {
     color: #bbb; font-size: 14px; flex-shrink: 0;
     width: 28px; height: 28px; margin-right: 0;
@@ -1298,10 +1339,12 @@
   }
   #atPanel .at-item:hover .at-enter { color: #888; }
   #atPanel .at-enter:hover { background: rgba(0,0,0,.06); color: #555; }
-  #atPanel .at-return {
+  #atPanel .at-return,
+  #atFlyout .at-return {
     color: #bbb; font-size: 13px; flex-shrink: 0; opacity: 0;
   }
-  #atPanel .at-item:hover .at-return { opacity: 1; color: #888; }
+  #atPanel .at-item:hover .at-return,
+  #atFlyout .at-item:hover .at-return { opacity: 1; color: #888; }
   /* 技能项：对齐建表面板（彩色角标 + 扁平行） */
   #skillPanel .skill-list { display: block; }
   #skillPanel .skill-item {
@@ -3452,16 +3495,17 @@
   function positionAtFlyoutFixed() {
     if (!atPanel || !atFlyout) return;
     var primary = atPanel.getBoundingClientRect();
-    var fw = 248;
-    var maxH = Math.min(300, window.innerHeight - 24);
+    var fw = 280;
+    var maxH = Math.min(320, window.innerHeight - 24);
     atFlyout.style.width = fw + "px";
     atFlyout.style.maxHeight = maxH + "px";
     /* 先显示才能量高度 */
     atFlyout.classList.add("show");
-    var fh = Math.min(maxH, atFlyout.offsetHeight || 220);
-    var gap = 6;
-    var placeRight = (window.innerWidth - primary.right - 8) >= fw;
-    var left = placeRight ? (primary.right + gap) : (primary.left - fw - gap);
+    var fh = Math.min(maxH, atFlyout.offsetHeight || 240);
+    var gap = 8;
+    /* 优先左侧（侧栏内右侧易被裁切）；左侧不够再右侧 */
+    var placeLeft = primary.left >= (fw + 16);
+    var left = placeLeft ? (primary.left - fw - gap) : (primary.right + gap);
     if (left < 8) left = 8;
     if (left + fw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - fw - 8);
     var top = primary.top;

@@ -1690,7 +1690,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7427athover"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7428flyfix"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -4994,7 +4994,7 @@ function bindEvents() {
       syncBtn();
       postToAgentSidebar('agent-sidebar-at-submenu-mode', { mode: mode });
       updateGuide(mode === 'hover'
-        ? '@ 二级已切到悬停展开：二级浮层优先右侧，空间不够则左侧，避免被裁切'
+        ? '@ 二级已切到悬停展开：二级浮层优先出现在一级左侧，竖向列表'
         : '@ 二级已切回点击下钻（原有）');
     }
     btn.addEventListener('click', function () {
