@@ -1159,6 +1159,11 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
 }
 .sp-titlebar .guide-bar .guide-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 .sp-titlebar .guide-bar .guide-btn.primary { background: #4d8cf5; border-color: #4d8cf5; }
+.sp-titlebar .guide-bar .guide-btn.sel-mode-on {
+  background: #4d8cf5;
+  border-color: #4d8cf5;
+  color: #fff;
+}
 
 /* ============ 稻壳风格首页 ============ */
 .np-main.np-main-docer {
@@ -1453,6 +1458,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
         <span class="guide-text" id="guideText">💡 可切换 Sheet 体验空白重算与面板形态</span>
         <div class="guide-actions">
           <button class="guide-btn primary" id="guideOpsWorkbookBtn" type="button">多表经营簿</button>
+          <button class="guide-btn" id="guideAtSubmenuModeBtn" type="button" title="@ 二级面板展开方式">@二级·点击</button>
           <button class="guide-btn" id="guideClearBlankBtn">清空整本</button>
           <button class="guide-btn" id="guideClearSheetBtn">清当前Sheet</button>
           <button class="guide-btn" id="guideDeleteSheetBtn">删当前Sheet</button>
@@ -1684,7 +1690,7 @@ body { font-family: "Microsoft YaHei", "微软雅黑", sans-serif; background: #
       <iframe
         id="agentSidebarFrame"
         class="agent-sidebar-frame"
-        src="agent-sidebar-embed-v74.html?embed=1&v=7426plustip"
+        src="agent-sidebar-embed-v74.html?embed=1&v=7427athover"
         title="WPS 灵犀侧栏（完整 Agent Demo）"
         allow="clipboard-read; clipboard-write"
       ></iframe>
@@ -4966,6 +4972,39 @@ function bindEvents() {
     openEastChinaOpsWorkbook();
   });
 
+  (function bindAtSubmenuModeToggle() {
+    var btn = $('guideAtSubmenuModeBtn');
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    var mode = 'click';
+    try {
+      var saved = localStorage.getItem('da_input_v74_at_submenu_mode');
+      if (saved === 'hover' || saved === 'click') mode = saved;
+    } catch (e) {}
+    function syncBtn() {
+      btn.textContent = mode === 'hover' ? '@二级·悬停' : '@二级·点击';
+      btn.classList.toggle('sel-mode-on', mode === 'hover');
+      btn.title = mode === 'hover'
+        ? '当前：悬停一级项即展开二级浮层（可切回点击下钻）'
+        : '当前：点击 › / 条目下钻二级（可切换为悬停展开）';
+    }
+    function applyMode(next) {
+      mode = next === 'hover' ? 'hover' : 'click';
+      try { localStorage.setItem('da_input_v74_at_submenu_mode', mode); } catch (e) {}
+      syncBtn();
+      postToAgentSidebar('agent-sidebar-at-submenu-mode', { mode: mode });
+      updateGuide(mode === 'hover'
+        ? '@ 二级已切到悬停展开：二级浮层优先右侧，空间不够则左侧，避免被裁切'
+        : '@ 二级已切回点击下钻（原有）');
+    }
+    btn.addEventListener('click', function () {
+      applyMode(mode === 'hover' ? 'click' : 'hover');
+    });
+    syncBtn();
+    /* iframe ready 后也会再同步一次 */
+    window.__daSyncAtSubmenuMode = function () { applyMode(mode); };
+  })();
+
   function fillExamplePrompt(btn) {
     const input = $('mainInput');
     setInputContent(input, btn.dataset.prompt);
@@ -6260,6 +6299,7 @@ function bindAgentSidebarBridge() {
         open: !!( $('aiSidebar') && $('aiSidebar').classList.contains('show') ),
       });
       if (parentSelection) notifyParentSelectionToSidebar(parentSelection);
+      if (typeof window.__daSyncAtSubmenuMode === 'function') window.__daSyncAtSubmenuMode();
       return;
     }
     if (d.type === 'agent-sidebar-request-inject-current') {

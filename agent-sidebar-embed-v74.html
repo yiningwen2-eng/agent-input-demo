@@ -1191,7 +1191,35 @@
     max-height: min(240px, calc(100vh - 260px));
     overflow-y: auto;
   }
-  #atFlyout { display: none !important; } /* 不再用并排飞出 */
+  #atFlyout {
+    display: none;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.16);
+    padding: 8px 6px 10px;
+    overflow: hidden;
+    flex-direction: column;
+    z-index: 10050;
+  }
+  #atFlyout.show {
+    display: flex !important;
+  }
+  #atFlyout .at-flyout-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    padding: 4px 8px 8px;
+  }
+  #atFlyout .at-flyout-list {
+    max-height: min(240px, calc(100vh - 120px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  #atPanel.at-hover-mode .at-item[data-at-id^="cat-"].is-hovering {
+    background: #f0f0f0;
+  }
   #atPanel .at-ftype {
     width: 28px; height: 28px; border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
@@ -2100,7 +2128,7 @@
     if (except !== "selRef" && selRefMenuEl) selRefMenuEl.classList.remove("show");
     if (except !== "at") {
       atPanel.classList.remove("show");
-      if (typeof hideAtFlyout === "function") hideAtFlyout(true);
+      if (typeof hideAtFlyout === "function") hideAtFlyout();
       atView = "root";
     }
     if (except !== "ctx") hideCtxMenu();
@@ -3391,6 +3419,173 @@
 
   let atHoverTimer = null;
   let atFlyoutPinned = false;
+  /** click=同框下钻（现有）；hover=悬停并排二级浮层（新增对比模式） */
+  var atSubmenuMode = "click";
+  var atFlyoutHoverKey = "";
+
+  function isAtHoverMode() {
+    return atSubmenuMode === "hover";
+  }
+
+  function setAtSubmenuMode(mode) {
+    atSubmenuMode = mode === "hover" ? "hover" : "click";
+    if (atPanel) atPanel.classList.toggle("at-hover-mode", isAtHoverMode());
+    hideAtFlyout();
+    if (atPanel && atPanel.classList.contains("show")) {
+      atView = "root";
+      renderAtPanel();
+    }
+    showToast(isAtHoverMode()
+      ? "@ 二级：悬停展开（浮层，避免被裁切）"
+      : "@ 二级：点击下钻（原有）");
+  }
+  if (window.AgentSidebarDemo) {
+    window.AgentSidebarDemo.setAtSubmenuMode = setAtSubmenuMode;
+  }
+
+  function ensureAtFlyoutOnBody() {
+    if (atFlyout && atFlyout.parentElement !== document.body) {
+      document.body.appendChild(atFlyout);
+    }
+  }
+
+  function positionAtFlyoutFixed() {
+    if (!atPanel || !atFlyout) return;
+    var primary = atPanel.getBoundingClientRect();
+    var fw = 248;
+    var maxH = Math.min(300, window.innerHeight - 24);
+    atFlyout.style.width = fw + "px";
+    atFlyout.style.maxHeight = maxH + "px";
+    /* 先显示才能量高度 */
+    atFlyout.classList.add("show");
+    var fh = Math.min(maxH, atFlyout.offsetHeight || 220);
+    var gap = 6;
+    var placeRight = (window.innerWidth - primary.right - 8) >= fw;
+    var left = placeRight ? (primary.right + gap) : (primary.left - fw - gap);
+    if (left < 8) left = 8;
+    if (left + fw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - fw - 8);
+    var top = primary.top;
+    if (top + fh > window.innerHeight - 8) top = Math.max(8, window.innerHeight - fh - 8);
+    atFlyout.style.position = "fixed";
+    atFlyout.style.left = left + "px";
+    atFlyout.style.top = top + "px";
+    atFlyout.style.right = "auto";
+    atFlyout.style.bottom = "auto";
+    atFlyout.style.zIndex = "10050";
+  }
+
+  function fillAtFlyout(drillTo) {
+    atFlyout.innerHTML = "";
+    var title = document.createElement("div");
+    title.className = "at-flyout-title";
+    title.textContent = drillTo === "sheets" ? "工作表" : (drillTo === "recent" ? "最近" : "历史会话");
+    atFlyout.appendChild(title);
+    var list = document.createElement("div");
+    list.className = "at-flyout-list";
+    atFlyout.appendChild(list);
+
+    if (drillTo === "sheets") {
+      var active = getActiveSheetName();
+      var names = getWorkbookSheetNames();
+      var search = document.createElement("input");
+      search.className = "at-sheet-search";
+      search.type = "text";
+      search.placeholder = "请输入内容";
+      search.addEventListener("click", function (e) { e.stopPropagation(); });
+      search.addEventListener("input", function () {
+        var q = (search.value || "").trim().toLowerCase();
+        list.querySelectorAll(".at-item[data-sheet-name]").forEach(function (el) {
+          var n = (el.getAttribute("data-sheet-name") || "").toLowerCase();
+          el.style.display = !q || n.indexOf(q) >= 0 ? "" : "none";
+        });
+      });
+      list.appendChild(search);
+      names.forEach(function (name) {
+        var item = makeAtItem({ kind: "sheet", sheetName: name, isActive: name === active });
+        item.setAttribute("data-sheet-name", name);
+        list.appendChild(item);
+      });
+      return;
+    }
+    if (drillTo === "recent") {
+      var loaded = 0;
+      var renderPage = function () {
+        var slice = ALL_RECENT_REFS.slice(loaded, loaded + RECENT_PAGE);
+        slice.forEach(function (r) { list.appendChild(makeAtItem(r)); });
+        loaded += slice.length;
+      };
+      renderPage();
+      list.onscroll = function () {
+        if (loaded >= ALL_RECENT_REFS.length) return;
+        if (list.scrollTop + list.clientHeight >= list.scrollHeight - 24) renderPage();
+      };
+      return;
+    }
+    if (drillTo === "chats") {
+      PAST_CHATS.forEach(function (r) { list.appendChild(makeAtItem(r)); });
+    }
+  }
+
+  function showAtFlyoutFor(drillTo, anchorBtn) {
+    if (!isAtHoverMode() || !drillTo) return;
+    clearTimeout(atHoverTimer);
+    atFlyoutHoverKey = drillTo;
+    ensureAtFlyoutOnBody();
+    fillAtFlyout(drillTo);
+    atFlyout.setAttribute("aria-hidden", "false");
+    positionAtFlyoutFixed();
+    if (atList) {
+      atList.querySelectorAll(".at-item.is-hovering").forEach(function (el) {
+        el.classList.remove("is-hovering");
+      });
+    }
+    if (anchorBtn) anchorBtn.classList.add("is-hovering");
+  }
+
+  function scheduleHideAtFlyout() {
+    clearTimeout(atHoverTimer);
+    atHoverTimer = setTimeout(function () {
+      hideAtFlyout();
+    }, 200);
+  }
+
+  function hideAtFlyout() {
+    clearTimeout(atHoverTimer);
+    if (!atFlyout) return;
+    atFlyout.classList.remove("show");
+    atFlyout.setAttribute("aria-hidden", "true");
+    atFlyout.innerHTML = "";
+    atFlyoutPinned = false;
+    atFlyoutHoverKey = "";
+    if (atList) {
+      atList.querySelectorAll(".at-item.is-hovering").forEach(function (el) {
+        el.classList.remove("is-hovering");
+      });
+    }
+  }
+
+  if (atFlyout) {
+    atFlyout.addEventListener("mouseenter", function () {
+      clearTimeout(atHoverTimer);
+    });
+    atFlyout.addEventListener("mouseleave", function () {
+      if (isAtHoverMode()) scheduleHideAtFlyout();
+    });
+  }
+  window.addEventListener("resize", function () {
+    if (atFlyout && atFlyout.classList.contains("show")) positionAtFlyoutFixed();
+  });
+
+  function bindAtDrillHover(btn, drillTo) {
+    btn.addEventListener("mouseenter", function () {
+      if (!isAtHoverMode() || atView !== "root") return;
+      showAtFlyoutFor(drillTo, btn);
+    });
+    btn.addEventListener("mouseleave", function () {
+      if (!isAtHoverMode()) return;
+      scheduleHideAtFlyout();
+    });
+  }
 
   document.querySelectorAll(".sheet-tab[data-sheet]").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -3433,16 +3628,6 @@
     showToast("已引用：" + label);
     closeMenus();
     updateSendState();
-  }
-
-  function hideAtFlyout() {
-    // 兼容旧调用；Cursor 下钻模式不再使用并排 flyout
-    clearTimeout(atHoverTimer);
-    atFlyout.classList.remove("show");
-    atFlyout.setAttribute("aria-hidden", "true");
-    atFlyout.innerHTML = "";
-    atFlyoutPinned = false;
-    recentLoaded = 0;
   }
 
   function fileTypeIconHtml(it) {
@@ -3508,6 +3693,10 @@
           e.stopPropagation();
           // 右侧 ›：进入本簿工作表二级；点主体：直接挂载当前激活表
           if (e.target.closest(".at-enter")) {
+            if (isAtHoverMode()) {
+              showAtFlyoutFor(it.drillTo || "sheets", btn);
+              return;
+            }
             atView = it.drillTo || "sheets";
             requestAnimationFrame(() => {
               renderAtPanel();
@@ -3520,6 +3709,7 @@
             name: "工作表 · " + sheetName,
           });
         });
+        bindAtDrillHover(btn, it.drillTo || "sheets");
       } else {
         btn.innerHTML =
           '<span class="at-icon ' + iconCls + '">' + iconText + "</span>" +
@@ -3530,12 +3720,17 @@
           e.preventDefault();
           e.stopPropagation();
           const next = it.drillTo;
+          if (isAtHoverMode()) {
+            showAtFlyoutFor(next, btn);
+            return;
+          }
           atView = next;
           requestAnimationFrame(() => {
             renderAtPanel();
             atPanel.classList.add("show");
           });
         });
+        bindAtDrillHover(btn, it.drillTo);
       }
     } else if (it.kind === "sheet") {
       const sheetName = it.sheetName || getActiveSheetName();
@@ -4059,6 +4254,11 @@ html.agent-embed .sidebar.hidden {
         uiClr.querySelectorAll(".chip.selection.is-active").forEach(function (n) {
           n.classList.remove("is-active");
         });
+      }
+    }
+    if (d.type === "agent-sidebar-at-submenu-mode") {
+      if (window.AgentSidebarDemo && typeof window.AgentSidebarDemo.setAtSubmenuMode === "function") {
+        window.AgentSidebarDemo.setAtSubmenuMode(d.mode === "hover" ? "hover" : "click");
       }
     }
     if (d.type === "agent-sidebar-set-sidebar-open") {
