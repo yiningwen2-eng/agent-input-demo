@@ -378,12 +378,13 @@
     stroke: #15803d;
   }
   .tool-btn.sel-ref-btn svg { width: 16px; height: 16px; }
+  /* Tip 以图标中心为锚：气泡可偏长，箭头始终对准选区引用图标 */
   .tool-btn.sel-ref-btn .tip {
     display: none;
     position: absolute;
     bottom: calc(100% + 8px);
-    left: 0;
-    transform: none;
+    left: 50%;
+    transform: translateX(-50%);
     background: #111827;
     color: #fff;
     font-size: 11px;
@@ -394,7 +395,12 @@
     z-index: 80;
     pointer-events: none;
   }
-  .tool-btn.sel-ref-btn:hover .tip { display: block; }
+  .tool-btn.sel-ref-btn .tip::after {
+    left: 50%;
+    transform: translateX(-50%);
+    border-top-color: #111827;
+  }
+  .tool-btn.sel-ref-btn:hover .tip { display: block; opacity: 1; }
 
   /* 询问条：无外框；选区芯片与输入区真实选区同款，后接按钮（引用后仅少按钮） */
   .sel-context-card {
@@ -2211,13 +2217,13 @@
         badgeRefOn ? "选区引用已开启" : "选区引用已关闭"
       );
       btn.title = badgeRefOn
-        ? "框选将自动加入 · 再点关闭"
-        : "打开后，框选将自动加入";
+        ? "框选将自动加入"
+        : "打开后，框选中将自动加入";
     }
     if (tip) {
       tip.textContent = badgeRefOn
-        ? "框选将自动加入 · 再点关闭"
-        : "打开后，框选将自动加入";
+        ? "框选将自动加入"
+        : "打开后，框选中将自动加入";
     }
     syncSelRefEntryVisibility();
   }
